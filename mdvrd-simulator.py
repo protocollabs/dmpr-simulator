@@ -26,9 +26,9 @@ NO_ROUTER = 100
 
 SIMULATION_TIME_SEC = 60 * 60
 
-TX_INTERVAL = 30
-TX_INTERVAL_JITTER = int(TX_INTERVAL / 4)
-DEAD_INTERVAL = TX_INTERVAL * 3 + 1
+RTN_MSG_INTERVAL = 30
+RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
+RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
 
 # two stiched images result in 1080p resoltion
 SIMU_AREA_X = 960
@@ -163,7 +163,7 @@ class Router:
 
 
     def _calc_next_tx_time(self):
-            self._next_tx_time = self.time + TX_INTERVAL + random.randint(0, TX_INTERVAL_JITTER)
+            self._next_tx_time = self.time + RTN_MSG_INTERVAL + random.randint(0, RTN_MSG_INTERVAL_JITTER)
 
 
     def _sequence_no(self, path_type):
@@ -238,7 +238,7 @@ class Router:
         for interface, v in self.route_rx_data.items():
             dellist = []
             for router_id, vv in v.items():
-                if self.time - vv["rx-time"] > DEAD_INTERVAL:
+                if self.time - vv["rx-time"] > RTN_MSG_HOLD_TIME:
                     msg = "outdated entry from {} received at {}, interface: {} - drop it"
                     self._log(msg.format(router_id, vv["rx-time"], interface))
                     dellist.append(router_id)
