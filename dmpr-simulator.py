@@ -47,6 +47,24 @@ PATH_IMAGES_TX    = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
 
+class LoggerClone:
+
+    def __init__(self, id_):
+        file_path = os.path.join(PATH_LOGS, "{0:05}.log".format(self.id))
+        self._log_fd = open(file_path, 'w')
+
+
+    def msg(self, msg):
+        msg = "{:5}: {}\n".format(self.time, msg)
+        self._log_fd.write(msg)
+
+
+    debug = msg
+    info = msg
+    warning = msg
+    error = msg
+    critical = msg
+
 
 
 class Router:
