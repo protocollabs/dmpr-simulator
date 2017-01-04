@@ -1,61 +1,69 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import time
-import sys
-import os
-import json
-import datetime
-import argparse
-import pprint
-import socket
-import struct
-import functools
-import uuid
-import random
-import math
-import addict
-import cairo
-import shutil
-import copy
-from PIL import Image
+    import time
+    import sys
+    import os
+    import json
+    import datetime
+    import argparse
+    import pprint
+    import socket
+    import struct
+    import functools
+    import uuid
+    import random
+    import math
+    import addict
+    import cairo
+    import shutil
+    import copy
+    from PIL import Image
 
 
 
-NO_ROUTER = 100
+    NO_ROUTER = 100
 
-SIMULATION_TIME_SEC = 60 * 60
+    SIMULATION_TIME_SEC = 60 * 60
 
-RTN_MSG_INTERVAL = 30
-RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
-RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
+    RTN_MSG_INTERVAL = 30
+    RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
+    RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
 
 # two stiched images result in 1080p resoltion
-SIMU_AREA_X = 960
-SIMU_AREA_Y = 1080
+    SIMU_AREA_X = 960
+    SIMU_AREA_Y = 1080
 
-DEFAULT_PACKET_TTL = 32
+    DEFAULT_PACKET_TTL = 32
 
-random.seed(1)
+    random.seed(1)
 
 # statitics variables follows
-NEIGHBOR_INFO_ACTIVE = 0
+    NEIGHBOR_INFO_ACTIVE = 0
 
-PATH_LOGS = "logs"
-PATH_IMAGES_RANGE = "images-range"
+    PATH_LOGS = "logs"
+    PATH_IMAGES_RANGE = "images-range"
 PATH_IMAGES_TX    = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
 
 class LoggerClone:
 
+    def calc_file_path(self, id_):
+        try:
+            val = "{0:05}.log".format(int(id_))
+        except ValueError:
+            val = "{}.log".format(str(id_))
+        return os.path.join(PATH_LOGS, val)
+
+
     def __init__(self, id_):
-        file_path = os.path.join(PATH_LOGS, "{0:05}.log".format(self.id))
+        file_path = self.calc_file_path(id_)
         self._log_fd = open(file_path, 'w')
 
 
-    def msg(self, msg):
-        msg = "{:5}: {}\n".format(self.time, msg)
+    def msg(self, msg, time=str(datetime.now()):
+        msg = "{} {}\n".format(time, msg)
         self._log_fd.write(msg)
 
 
@@ -76,10 +84,12 @@ class Router:
         UPWARDS = 1
         DOWNWARDS = 2
 
-        def __init__(self):
+        def __init__(self, simu_area_x, simu_area_y):
             self.direction_x = random.randint(0, 2)
             self.direction_y = random.randint(0, 2)
             self.velocity = random.randint(1, 1)
+            self.simu_area_x = simu_area_x
+            self.simu_area_y = simu_area_y
 
 
         def _move_x(self, x):
@@ -90,9 +100,9 @@ class Router:
                     x = 0
             elif self.direction_x == Router.MobilityModel.RIGHT:
                 x += self.velocity
-                if x >= SIMU_AREA_X:
+                if x >= self.simu_area_x:
                     self.direction_x = Router.MobilityModel.LEFT
-                    x = SIMU_AREA_X
+                    x = self.simu_area_x
             else:
                 pass
             return x
@@ -101,9 +111,9 @@ class Router:
         def _move_y(self, y):
             if self.direction_y == Router.MobilityModel.DOWNWARDS:
                 y += self.velocity
-                if y >= SIMU_AREA_Y:
+                if y >= self.simu_area_y:
                     self.direction_y = Router.MobilityModel.UPWARDS
-                    y = SIMU_AREA_Y
+                    y = self.simu_area_y
             elif self.direction_y == Router.MobilityModel.UPWARDS:
                 y -= self.velocity
                 if y <= 0:
@@ -132,7 +142,7 @@ class Router:
 
         self._init_terminals_data()
         self._calc_next_tx_time()
-        self.mm = Router.MobilityModel()
+        self.mm = Router.MobilityModel(SIMU_AREA_X, SIMU_AREA_Y)
         self.transmitted_now = False
 
         self.route_rx_data = dict()
