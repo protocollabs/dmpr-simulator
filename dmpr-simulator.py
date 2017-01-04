@@ -78,20 +78,48 @@ class LoggerClone:
 class Router:
 
 
-    def __init__(self, id_, prefix_v4, mm=None):
+    def __init__(self, id_, interfaces=None, mm=None):
+        self.id = id_
         self.log = LoggerClone(id_)
-        self.mm = mm
         assert(mm)
+        self.mm = mm
+        assert(interfaces)
+        self.interfaces=interfaces
+        self.connections = dict()
+        for interface in self.interfaces:
+            self.connections[interface['name']] = dict()
+
 
     def register_router(self, r):
         self.r = r
 
+
     def step(self):
         self.mm.step()
+        self.connect()
 
-    def coordindate(self):
+
+    def coordinates(self):
         return self.mm.coordinates()
 
+    def connect_links(self, dist, other):
+        for interface in self.interfaces:
+            name = interface['name']
+            range = interface['range']
+            if dist <= range:
+                self.connections[name][other.id] = other
+            else:
+                if other.id in self.connections[name]:
+                    del self.connections[name][other.id]
+
+    def connect(self):
+        for neighbor in self.r:
+            if self.id == neighbor.id:
+                continue
+            own_cor = self.coordinates()
+            other_cor = neighbor.coordinates()
+            dist = math.hypot(own_cor[1] - other_cor[1], own_cor[0] - other_cor[0])
+            self.connect_links(dist, neighbor)
 
 
 
@@ -370,12 +398,17 @@ class MobilityModel(object):
 
 def two_router_basic():
 
+    interfaces = [
+        { "name" : "wifi0",  "range" : 100, "bandwidth" : 5000, "loss" : 5},
+        { "name" : "tetra0", "range" : 300, "bandwidth" : 5000, "loss" : 10}
+    ]
+
     area = MobilityArea(600, 500)
     r = []
     mm = StaticMobilityModel(area, 200, 250)
-    r.append(Router("1", rand_ip_prefix('v4'), mm=mm))
+    r.append(Router("1", interfaces=interfaces, mm=mm))
     mm = StaticMobilityModel(area, 400, 250)
-    r.append(Router("2", rand_ip_prefix('v4'), mm=mm))
+    r.append(Router("2", interfaces=interfaces, mm=mm))
 
     r[0].register_router(r)
     r[1].register_router(r)
