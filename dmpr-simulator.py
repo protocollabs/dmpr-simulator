@@ -143,45 +143,42 @@ def dist_update_all(r):
             r[j].dist_update(dist, r[i])
 
 
-def draw_router_loc(r, path, img_idx):
+def draw_router_loc(area, r, path, img_idx):
     c_links = { 'tetra00' : (1.0, 0.15, 0.15, 1.0),  'wifi00' :(0.15, 1.0, 0.15, 1.0)}
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, SIMU_AREA_X, SIMU_AREA_Y)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
-    ctx.rectangle(0, 0, SIMU_AREA_X, SIMU_AREA_Y)
+    ctx.rectangle(0, 0, area.x, area.y)
     ctx.set_source_rgba(0.15, 0.15, 0.15, 1.0)
     ctx.fill()
 
-    for i in range(NO_ROUTER):
+    for i in range(len(r)):
         router = r[i]
-        x = router.pos_x
-        y = router.pos_y
+        x, y = router.coordinates()
 
         color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05))
         ctx.set_line_width(0.1)
         path_thinkness = 4.0
         # iterate over links
-        for i, t in enumerate(router.ti):
+        for i, t in enumerate(router.interfaces):
             range_ = t['range']
-            path_type = t['path_type']
             ctx.set_source_rgba(*color[i])
             ctx.move_to(x, y)
             ctx.arc(x, y, range_, 0, 2 * math.pi)
             ctx.fill()
 
             # draw lines between links
-            ctx.set_line_width(path_thinkness)
-            for r_id, other in router.terminals[t['path_type']].connections.items():
-                other_x, other_y = other.pos_x, other.pos_y
-                ctx.move_to(x, y)
-                ctx.set_source_rgba(*c_links[path_type])
-                ctx.line_to(other_x, other_y)
-                ctx.stroke()
-            path_thinkness -= 2.0
+            #ctx.set_line_width(path_thinkness)
+            #for r_id, other in router.terminals[t['path_type']].connections.items():
+            #    other_x, other_y = other.pos_x, other.pos_y
+            #    ctx.move_to(x, y)
+            #    ctx.set_source_rgba(*c_links[path_type])
+            #    ctx.line_to(other_x, other_y)
+            #    ctx.stroke()
+            #path_thinkness -= 2.0
 
-    for i in range(NO_ROUTER):
+    for i in range(len(r)):
         router = r[i]
-        x = router.pos_x
-        y = router.pos_y
+        x, y = router.coordinates()
 
         # node middle point
         ctx.set_line_width(0.0)
@@ -197,10 +194,10 @@ def draw_router_loc(r, path, img_idx):
         ctx.show_text(str(router.id))
 
         # router IP prefix
-        ctx.set_font_size(8)
-        ctx.set_source_rgba(0.5, 1, 0.7, 0.5)
-        ctx.move_to(x + 10, y + 20)
-        ctx.show_text(router.prefix_v4)
+        #ctx.set_font_size(8)
+        #ctx.set_source_rgba(0.5, 1, 0.7, 0.5)
+        #ctx.move_to(x + 10, y + 20)
+        #ctx.show_text(router.prefix_v4)
 
     full_path = os.path.join(path, "{0:05}.png".format(img_idx))
     surface.write_to_png(full_path)
@@ -283,11 +280,11 @@ def image_merge(merge_path, range_path, tx_path, img_idx):
     new_im.save(m_path, "PNG")
 
 
-def draw_images(r, img_idx):
-    draw_router_loc(r, PATH_IMAGES_RANGE, img_idx)
-    draw_router_transmission(r, PATH_IMAGES_TX, img_idx)
+def draw_images(area, r, img_idx):
+    draw_router_loc(area, r, PATH_IMAGES_RANGE, img_idx)
+    #draw_router_transmission(r, PATH_IMAGES_TX, img_idx)
 
-    image_merge(PATH_IMAGES_MERGE, PATH_IMAGES_RANGE, PATH_IMAGES_TX, img_idx)
+    #image_merge(PATH_IMAGES_MERGE, PATH_IMAGES_RANGE, PATH_IMAGES_TX, img_idx)
 
 
 def setup_img_folder():
@@ -399,8 +396,8 @@ class MobilityModel(object):
 def two_router_basic():
 
     interfaces = [
-        { "name" : "wifi0",  "range" : 100, "bandwidth" : 5000, "loss" : 5},
-        { "name" : "tetra0", "range" : 300, "bandwidth" : 5000, "loss" : 10}
+        { "name" : "wifi0",  "range" : 210, "bandwidth" : 5000, "loss" : 5},
+        { "name" : "tetra0", "range" : 250, "bandwidth" : 5000, "loss" : 10}
     ]
 
     area = MobilityArea(600, 500)
@@ -417,11 +414,10 @@ def two_router_basic():
     for sec in range(SIMU_TIME):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
-        r[0].step()
-        r[1].step()
+        for i in range(len(r)):
+            r[i].step()
+        draw_images(area, r, sec)
 
-    # initial positioning
-    #dist_update_all(r)
 
     #src_id = random.randint(0, NO_ROUTER - 1)
     #dst_id = random.randint(0, NO_ROUTER - 1)
