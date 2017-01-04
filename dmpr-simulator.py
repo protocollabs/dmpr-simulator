@@ -84,10 +84,12 @@ class Router:
         UPWARDS = 1
         DOWNWARDS = 2
 
-        def __init__(self):
+        def __init__(self, simu_area_x, simu_area_y):
             self.direction_x = random.randint(0, 2)
             self.direction_y = random.randint(0, 2)
             self.velocity = random.randint(1, 1)
+            self.simu_area_x = simu_area_x
+            self.simu_area_y = simu_area_y
 
 
         def _move_x(self, x):
@@ -98,9 +100,9 @@ class Router:
                     x = 0
             elif self.direction_x == Router.MobilityModel.RIGHT:
                 x += self.velocity
-                if x >= SIMU_AREA_X:
+                if x >= self.simu_area_x:
                     self.direction_x = Router.MobilityModel.LEFT
-                    x = SIMU_AREA_X
+                    x = self.simu_area_x
             else:
                 pass
             return x
@@ -109,9 +111,9 @@ class Router:
         def _move_y(self, y):
             if self.direction_y == Router.MobilityModel.DOWNWARDS:
                 y += self.velocity
-                if y >= SIMU_AREA_Y:
+                if y >= self.simu_area_y:
                     self.direction_y = Router.MobilityModel.UPWARDS
-                    y = SIMU_AREA_Y
+                    y = self.simu_area_y
             elif self.direction_y == Router.MobilityModel.UPWARDS:
                 y -= self.velocity
                 if y <= 0:
@@ -140,7 +142,7 @@ class Router:
 
         self._init_terminals_data()
         self._calc_next_tx_time()
-        self.mm = Router.MobilityModel()
+        self.mm = Router.MobilityModel(SIMU_AREA_X, SIMU_AREA_Y)
         self.transmitted_now = False
 
         self.route_rx_data = dict()
