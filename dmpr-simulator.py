@@ -1,48 +1,48 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-    import time
-    import sys
-    import os
-    import json
-    import datetime
-    import argparse
-    import pprint
-    import socket
-    import struct
-    import functools
-    import uuid
-    import random
-    import math
-    import addict
-    import cairo
-    import shutil
-    import copy
-    from PIL import Image
+import time
+import sys
+import os
+import json
+import datetime
+import argparse
+import pprint
+import socket
+import struct
+import functools
+import uuid
+import random
+import math
+import addict
+import cairo
+import shutil
+import copy
+from PIL import Image
 
 
 
-    NO_ROUTER = 100
+NO_ROUTER = 100
 
-    SIMULATION_TIME_SEC = 60 * 60
+SIMULATION_TIME_SEC = 60 * 60
 
-    RTN_MSG_INTERVAL = 30
-    RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
-    RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
+RTN_MSG_INTERVAL = 30
+RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
+RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
 
 # two stiched images result in 1080p resoltion
-    SIMU_AREA_X = 960
-    SIMU_AREA_Y = 1080
+SIMU_AREA_X = 960
+SIMU_AREA_Y = 1080
 
-    DEFAULT_PACKET_TTL = 32
+DEFAULT_PACKET_TTL = 32
 
-    random.seed(1)
+random.seed(1)
 
 # statitics variables follows
-    NEIGHBOR_INFO_ACTIVE = 0
+NEIGHBOR_INFO_ACTIVE = 0
 
-    PATH_LOGS = "logs"
-    PATH_IMAGES_RANGE = "images-range"
+PATH_LOGS = "logs"
+PATH_IMAGES_RANGE = "images-range"
 PATH_IMAGES_TX    = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
@@ -62,7 +62,7 @@ class LoggerClone:
         self._log_fd = open(file_path, 'w')
 
 
-    def msg(self, msg, time=str(datetime.now()):
+    def msg(self, msg, time=str(datetime.datetime.now())):
         msg = "{} {}\n".format(time, msg)
         self._log_fd.write(msg)
 
@@ -77,303 +77,22 @@ class LoggerClone:
 
 class Router:
 
-    class MobilityModel:
 
-        LEFT = 1
-        RIGHT = 2
-        UPWARDS = 1
-        DOWNWARDS = 2
+    def __init__(self, id_, prefix_v4, mm=None):
+        self.log = LoggerClone(id_)
+        self.mm = mm
+        assert(mm)
 
-        def __init__(self, simu_area_x, simu_area_y):
-            self.direction_x = random.randint(0, 2)
-            self.direction_y = random.randint(0, 2)
-            self.velocity = random.randint(1, 1)
-            self.simu_area_x = simu_area_x
-            self.simu_area_y = simu_area_y
-
-
-        def _move_x(self, x):
-            if self.direction_x == Router.MobilityModel.LEFT:
-                x -= self.velocity
-                if x <= 0:
-                    self.direction_x = Router.MobilityModel.RIGHT
-                    x = 0
-            elif self.direction_x == Router.MobilityModel.RIGHT:
-                x += self.velocity
-                if x >= self.simu_area_x:
-                    self.direction_x = Router.MobilityModel.LEFT
-                    x = self.simu_area_x
-            else:
-                pass
-            return x
-
-
-        def _move_y(self, y):
-            if self.direction_y == Router.MobilityModel.DOWNWARDS:
-                y += self.velocity
-                if y >= self.simu_area_y:
-                    self.direction_y = Router.MobilityModel.UPWARDS
-                    y = self.simu_area_y
-            elif self.direction_y == Router.MobilityModel.UPWARDS:
-                y -= self.velocity
-                if y <= 0:
-                    self.direction_y = Router.MobilityModel.DOWNWARDS
-                    y = 0
-            else:
-                pass
-            return y
-
-
-        def move(self, x, y):
-            x = self._move_x(x)
-            y = self._move_y(y)
-            return x, y
-
-
-    def __init__(self, id, ti, prefix_v4):
-        self.id = id
-        self._init_log()
-        self.ti = ti
-        self.prefix_v4 = prefix_v4
-        self.pos_x = random.randint(0, SIMU_AREA_X)
-        self.pos_y = random.randint(0, SIMU_AREA_Y)
-        self.time = 0
-        self._print_log_header()
-
-        self._init_terminals_data()
-        self._calc_next_tx_time()
-        self.mm = Router.MobilityModel(SIMU_AREA_X, SIMU_AREA_Y)
-        self.transmitted_now = False
-
-        self.route_rx_data = dict()
-        for interface in ti:
-            self.route_rx_data[interface['path_type']] = dict()
-
-
-    def _print_log_header(self):
-        self._log("Initialize router {}".format(self.id))
-        self._log("  v4 prefix:{}".format(self.prefix_v4))
-
-
-    def _log(self, msg):
-        msg = "{:5}: {}\n".format(self.time, msg)
-        self._log_fd.write(msg)
-
-
-    def _init_log(self):
-        file_path = os.path.join(PATH_LOGS, "{0:05}.log".format(self.id))
-        self._log_fd = open(file_path, 'w')
-
-
-    def _cmp_dicts(self, dict1, dict2):
-        if dict1 == None or dict2 == None: return False
-        if type(dict1) is not dict or type(dict2) is not dict: return False
-        shared_keys = set(dict2.keys()) & set(dict2.keys())
-        if not len(shared_keys) == len(dict1.keys()) and len(shared_keys) == len(dict2.keys()):
-            return False
-        eq = True
-        for key in dict1.keys():
-            if type(dict1[key]) is dict:
-                eq = eq and compare_dictionaries(dict1[key],dict2[key])
-            else:
-                eq = eq and (dict1[key] == dict2[key])
-        return eq
-
-
-    def _cmp_packets(self, packet1, packet2):
-        p1 = copy.deepcopy(packet1)
-        p2 = copy.deepcopy(packet2)
-        # some data may differ, but the content is identical,
-        # zeroize them here out
-        p1['sequence-no'] = 0
-        p2['sequence-no'] = 0
-        return self._cmp_dicts(p1, p2)
-
-
-    def _calc_next_tx_time(self):
-            self._next_tx_time = self.time + RTN_MSG_INTERVAL + random.randint(0, RTN_MSG_INTERVAL_JITTER)
-
-
-    def _sequence_no(self, path_type):
-        return self.terminals[path_type].sequence_no
-
-
-    def _sequence_no_inc(self, path_type):
-        self.terminals[path_type].sequence_no += 1
-
-
-    def _init_terminals_data(self):
-        self.terminals = addict.Dict()
-        for t in self.ti:
-            self.terminals[t['path_type']] = addict.Dict()
-            self.terminals[t['path_type']].connections = dict()
-            # we initialize and handle as many sequence numbers
-            # as interfaces because sequence numbers are interface
-            # specific. Think about n interfaces, each with a different
-            # transmission interval, thus the sequence number is
-            # incremented independently.
-            self.terminals[t['path_type']].sequence_no = 0
-
-
-    def dist_update(self, dist, other):
-        """connect is just information base on distance
-           path loss or other effects are modeled afterwards.
-           This models the PHY channel somehow."""
-        for v in self.ti:
-            t = v['path_type']
-            max_range = v['range']
-            if dist <= max_range:
-                #print("{} in range:     {} to {} - {} m via {}".format(t, self.id, other.id, dist, t))
-                self.terminals[t].connections[other.id] = other
-            else:
-                #print("{} out of range: {} to {} - {} m".format(t, self.id, other.id, dist))
-                if other.id in self.terminals[t].connections:
-                    del self.terminals[t].connections[other.id]
-
-
-    def _rx_save_routing_data(self, sender, interface, packet):
-        route_recalc_required = True
-        if not sender.id in self.route_rx_data[interface]:
-            # new entry (never seen before) or outdated comes
-            # back again
-            self.route_rx_data[interface][sender.id] = dict()
-            global NEIGHBOR_INFO_ACTIVE
-            NEIGHBOR_INFO_ACTIVE += 1
-        else:
-            self._log("\texisting entry")
-            # existing entry from neighbor
-            seq_no_last = self.route_rx_data[interface][sender.id]['packet']['sequence-no']
-            seq_no_new  = packet['sequence-no']
-            if seq_no_new <= seq_no_last:
-                print("receive duplicate or outdated route packet -> ignore it")
-                route_recalc_required = False
-                return route_recalc_required
-            data_equal = self._cmp_packets(self.route_rx_data[interface][sender.id]['packet'], packet)
-            if data_equal:
-                # packet is identical, we must save the last packet (think update sequence no)
-                # but a route recalculation is not required
-                route_recalc_required = False
-        self.route_rx_data[interface][sender.id]['rx-time'] = self.time
-        self.route_rx_data[interface][sender.id]['packet'] = packet
-
-        # for now recalculate route table at every received packet, later we
-        # will only recalculate when data has changed
-        return route_recalc_required
-
-
-    def _check_outdated_route_entries(self):
-        route_recalc_required = False
-        for interface, v in self.route_rx_data.items():
-            dellist = []
-            for router_id, vv in v.items():
-                if self.time - vv["rx-time"] > RTN_MSG_HOLD_TIME:
-                    msg = "outdated entry from {} received at {}, interface: {} - drop it"
-                    self._log(msg.format(router_id, vv["rx-time"], interface))
-                    dellist.append(router_id)
-            for id in dellist:
-                route_recalc_required = True
-                del v[id]
-                global NEIGHBOR_INFO_ACTIVE
-                NEIGHBOR_INFO_ACTIVE -= 1
-        return route_recalc_required
-
-
-    def _recalculate_routing_table(self):
-        self._log("recalculate routing table")
-        # this function is called when
-        # a) a new routing packet is received from one of our neighbors
-        # b) a particular routing information is outdated and removed from
-        #    self.route_rx_data
-        # if you have a packet for id 200, then you have one possibility via 23 via interface "wifi00
-        # self.fib["200"] = {
-        # 			"highest-bandwidth": { "next-hop-id" : 23, "interface" : "wifi00"  },
-        # 			"lowest-loss": { "next-hop-id" : 23, "interface" : "tetra00"  }
-        # }
-        # self.fib["20"] = {
-        # 			"highest-bandwidth": { "next-hop-id" : 23, "interface" : "wifi00"  },
-        # 			"lowest-loss": { "next-hop-id" : 23, "interface" : "tetra00"  }
-        # }
-        # self.fib["23"] = {
-        # 			"highest-bandwidth": { "next-hop-id" : "direct", "interface" : "wifi00"  },
-        # 			"lowest-loss": { "next-hop-id" : "direct", "interface" : "tetra00"  }
-        # }
-
-
-    def rx_route_packet(self, sender, interface, packet):
-        msg = "rx route packet from {}, interface:{}, seq-no:{}"
-        self._log(msg.format(sender.id, interface, packet['sequence-no']))
-        route_recalc_required = self._rx_save_routing_data(sender, interface, packet)
-        if route_recalc_required:
-            self._recalculate_routing_table()
-
-
-    def create_routing_packet(self, path_type):
-        packet = dict()
-        packet['router-id'] = self.id
-        # add sequence number to packet ..
-        packet['sequence-no'] = self._sequence_no(path_type)
-        # ... and increment number locally
-        self._sequence_no_inc(path_type)
-        packet['networks'] = list()
-        packet['networks'].append({"v4-prefix" : self.prefix_v4})
-        return packet
-
-
-    def tx_route_packet(self):
-        # depending on local information the route
-        # packets must be generated for each interface
-        #print("{} transmit data".format(self.id))
-        for v in self.ti:
-            interface = v['path_type']
-            packet = self.create_routing_packet(interface)
-            for other_id, other_router in self.terminals[interface].connections.items():
-                """ this is the multicast packet transmission process """
-                #print(" to router {} [{}]".format(other_id, t))
-                other_router.rx_route_packet(self, interface, packet)
-
-
-    def forward_data_packet(self, packet):
-        # do a route FIB lookup to each dst_id
-        # and forward data to this router. If no
-        # route can be found then
-        # a) the destination is out of range
-        # b) route table has a bug
-        dst_id = packet.dst_id
-        src_id = packet.src_id
-        print("packet src:{} dst:{}".format(src_id, dst_id))
-        print("  current:{} nexthop:?".format(self.id))
-        print("  TOS: {} (packet prefered way)".format(packet.tos))
-
-
-    def rx_data_packet(self, sender, interface, packet):
-        print("{} receive data packet from {}".format(self.id, sender.id))
-        if dst_id == self.id:
-            print("FINISH, packet received at destination")
-        else:
-            if packet.ttl <= 0:
-                print("TTL 0 reached, routing loop detected!!!")
-                return
-            packet.ttl -= 0
-            self.forward_data_packet(packet)
-
-
-    def pos(self):
-        return self.pos_x, self.pos_y
-
+    def register_router(self, r):
+        self.r = r
 
     def step(self):
-        self.time += 1
-        self.pos_x, self.pos_y = self.mm.move(self.pos_x, self.pos_y)
-        route_recalc_required = self._check_outdated_route_entries()
-        if route_recalc_required:
-            self._recalculate_routing_table()
+        self.mm.step()
 
-        if self.time == self._next_tx_time:
-            self.tx_route_packet()
-            self._calc_next_tx_time()
-            self.transmitted_now = True
-        else:
-            self.transmitted_now = False
+    def coordindate(self):
+        return self.mm.coordinates()
+
+
 
 
 def rand_ip_prefix(type_):
@@ -521,7 +240,6 @@ def draw_router_transmission(r, path, img_idx):
 
 
 def image_merge(merge_path, range_path, tx_path, img_idx):
-
     m_path = os.path.join(merge_path, "{0:05}.png".format(img_idx))
     r_path = os.path.join(range_path, "{0:05}.png".format(img_idx))
     t_path = os.path.join(tx_path,    "{0:05}.png".format(img_idx))
@@ -556,7 +274,6 @@ def gen_data_packet(src_id, dst_id, tos='low-loss'):
     packet.src_id = src_id
     packet.dst_id = dst_id
     packet.ttl = DEFAULT_PACKET_TTL
-    # the prefered transmit is via wifi00, can be tetra if not possible
     packet.tos = tos
     return packet
 
@@ -567,38 +284,152 @@ def setup_log_folder():
     os.makedirs(PATH_LOGS)
 
 
-def main():
-    setup_img_folder()
-    setup_log_folder()
+class MobilityArea(object):
 
-    ti = [ {"path_type": "wifi00", "range" : 100, "bandwidth" : 5000},
-           {"path_type": "tetra00", "range" : 150, "bandwidth" : 1000 } ]
+    def __init__(self, width, height):
+        self.x = width
+        self.y = height
 
-    r = dict()
-    for i in range(NO_ROUTER):
-        prefix_v4 = rand_ip_prefix('v4')
-        r[i] = Router(i, ti, prefix_v4)
+
+class StaticMobilityModel(object):
+    def __init__(self, area, x, y):
+        self.area = area
+        self.x = x
+        self.y = y
+        assert(self.x >= 0 and self.x <= self.area.x)
+        assert(self.y >= 0 and self.y <= self.area.y)
+
+    def coordinates(self):
+        return self.x, self.y
+
+    def step(self):
+        # static
+        pass
+
+
+class MobilityModel(object):
+
+    LEFT = 1
+    RIGHT = 2
+    UPWARDS = 1
+    DOWNWARDS = 2
+
+    def __init__(self, area):
+        self.area = area
+        self.direction_x = random.randint(0, 2)
+        self.direction_y = random.randint(0, 2)
+        self.velocity = random.randint(1, 1)
+        self.x = random.randint(0, self.area.x)
+        self.y = random.randint(0, self.area.y)
+
+
+    def _move_x(self, x):
+        if self.direction_x == MobilityModel.LEFT:
+            x -= self.velocity
+            if x <= 0:
+                self.direction_x = MobilityModel.RIGHT
+                x = 0
+        elif self.direction_x == MobilityModel.RIGHT:
+            x += self.velocity
+            if x >= self.area.x:
+                self.direction_x = MobilityModel.LEFT
+                x = self.area.x
+        else:
+            pass
+        return x
+
+
+    def _move_y(self, y):
+        if self.direction_y == MobilityModel.DOWNWARDS:
+            y += self.velocity
+            if y >= self.area.y:
+                self.direction_y = MobilityModel.UPWARDS
+                y = self.area.y
+        elif self.direction_y == MobilityModel.UPWARDS:
+            y -= self.velocity
+            if y <= 0:
+                self.direction_y = MobilityModel.DOWNWARDS
+                y = 0
+        else:
+            pass
+        return y
+
+
+    def move(self, x, y):
+        x = self._move_x(x)
+        y = self._move_y(y)
+        return x, y
+
+    def step(self):
+        self.x, self.y = self.move(self.x, self.y)
+
+    def coordinates(self):
+        return self.x, self.y
+
+
+
+def two_router_basic():
+
+    area = MobilityArea(600, 500)
+    r = []
+    mm = StaticMobilityModel(area, 200, 250)
+    r.append(Router("1", rand_ip_prefix('v4'), mm=mm))
+    mm = StaticMobilityModel(area, 400, 250)
+    r.append(Router("2", rand_ip_prefix('v4'), mm=mm))
+
+    r[0].register_router(r)
+    r[1].register_router(r)
+
+    SIMU_TIME = 1000
+    for sec in range(SIMU_TIME):
+        sep = '=' * 50
+        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
+        r[0].step()
+        r[1].step()
 
     # initial positioning
-    dist_update_all(r)
+    #dist_update_all(r)
 
-    src_id = random.randint(0, NO_ROUTER - 1)
-    dst_id = random.randint(0, NO_ROUTER - 1)
-    packet_low_loss       = gen_data_packet(src_id, dst_id, tos='low-loss')
-    packet_high_througput = gen_data_packet(src_id, dst_id, tos='high-throughput')
-    for sec in range(SIMULATION_TIME_SEC):
-        sep = '=' * 50
-        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMULATION_TIME_SEC))
-        for i in range(NO_ROUTER):
-            r[i].step()
-        dist_update_all(r)
-        draw_images(r, sec)
-        # inject test data packet into network
-        r[src_id].forward_data_packet(packet_low_loss)
-        r[src_id].forward_data_packet(packet_high_througput)
+    #src_id = random.randint(0, NO_ROUTER - 1)
+    #dst_id = random.randint(0, NO_ROUTER - 1)
+    #packet_low_loss       = gen_data_packet(src_id, dst_id, tos='low-loss')
+    #packet_high_througput = gen_data_packet(src_id, dst_id, tos='high-throughput')
+    #for sec in range(SIMULATION_TIME_SEC):
+    #    for i in range(NO_ROUTER):
+    #        r[i].step()
+    #    dist_update_all(r)
+    #    draw_images(r, sec)
+    #    # inject test data packet into network
+    #    r[src_id].forward_data_packet(packet_low_loss)
+    #    r[src_id].forward_data_packet(packet_high_througput)
 
-    cmd = "ffmpeg -framerate 10 -pattern_type glob -i 'images-merge/*.png' -c:v libx264 -pix_fmt yuv420p mdvrd.mp4"
-    print("now execute \"{}\" to generate a video".format(cmd))
+
+scenarios = [
+        [ "two-router-basis", two_router_basic ]
+]
+
+def die():
+    print("scenario as argument required")
+    for scenario in scenarios:
+        print("  {}".format(scenario[0]))
+    sys.exit(1)
+
+def main():
+    if len(sys.argv) > 1:
+        scenario_name = sys.argv[1]
+    else:
+        die()
+
+    for scenario in scenarios:
+        if scenario_name == scenario[0]:
+            setup_img_folder()
+            setup_log_folder()
+            scenario[1]()
+            #cmd = "ffmpeg -framerate 10 -pattern_type glob -i 'images-merge/*.png' -c:v libx264 -pix_fmt yuv420p mdvrd.mp4"
+            #print("now execute \"{}\" to generate a video".format(cmd))
+            sys.exit(0)
+    die()
+
 
 
 if __name__ == '__main__':
