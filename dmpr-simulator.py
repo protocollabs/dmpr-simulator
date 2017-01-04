@@ -49,13 +49,21 @@ PATH_IMAGES_MERGE = "images-merge"
 
 class LoggerClone:
 
+    def calc_file_path(self, id_):
+        try:
+            val = "{0:05}.log".format(int(id_))
+        except ValueError:
+            val = "{}.log".format(str(id_))
+        return os.path.join(PATH_LOGS, val)
+
+
     def __init__(self, id_):
-        file_path = os.path.join(PATH_LOGS, "{0:05}.log".format(self.id))
+        file_path = self.calc_file_path(id_)
         self._log_fd = open(file_path, 'w')
 
 
-    def msg(self, msg):
-        msg = "{:5}: {}\n".format(self.time, msg)
+    def msg(self, msg, time=str(datetime.now()):
+        msg = "{} {}\n".format(time, msg)
         self._log_fd.write(msg)
 
 
