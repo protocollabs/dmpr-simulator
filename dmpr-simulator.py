@@ -86,6 +86,7 @@ class Router:
         self.connections = dict()
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
+        self.transmission_within_second = False
 
 
     def _generate_configuration(self):
@@ -226,42 +227,41 @@ def draw_router_loc(ld, area, r, img_idx):
     surface.write_to_png(full_path)
 
 
-def draw_router_transmission(ld, r, path, img_idx):
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, SIMU_AREA_X, SIMU_AREA_Y)
+def draw_router_transmission(ld, area, r, img_idx):
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
-    ctx.rectangle(0, 0, SIMU_AREA_X, SIMU_AREA_Y)
+    ctx.rectangle(0, 0, area.x, area.y)
     ctx.set_source_rgba(0.15, 0.15, 0.15, 1.0)
     ctx.fill()
 
     # transmitting circles
-    for i in range(NO_ROUTER):
+    for i in range(len(r)):
         router = r[i]
-        x = router.pos_x
-        y = router.pos_y
+        x, y = router.coordinates()
 
-        if router.transmitted_now:
+        if router.transmission_within_second:
             ctx.set_source_rgba(.10, .10, .10, 1.0)
             ctx.move_to(x, y)
             ctx.arc(x, y, 50, 0, 2 * math.pi)
             ctx.fill()
 
-    for i in range(NO_ROUTER):
+    for i in range(len(r)):
         router = r[i]
-        x = router.pos_x
-        y = router.pos_y
+        x, y = router.coordinates()
 
-        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05))
+        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
+                (.0, 0.0, 0.5, 0.05), (1.0, 0.5, 1.0, 0.05))
         ctx.set_line_width(0.1)
         path_thinkness = 6.0
         # iterate over links
-        for i, t in enumerate(router.ti):
+        for i, t in enumerate(router.interfaces):
             range_ = t['range']
-            path_type = t['path_type']
+            interface_name = t['name']
 
             # draw lines between links
             ctx.set_line_width(path_thinkness)
-            for r_id, other in router.terminals[t['path_type']].connections.items():
-                other_x, other_y = other.pos_x, other.pos_y
+            for r_id, r_obj in router.connections[interface_name].items():
+                other_x, other_y = r_obj.coordinates()
                 ctx.move_to(x, y)
                 ctx.set_source_rgba(.0, .0, .0, .4)
                 ctx.line_to(other_x, other_y)
@@ -272,10 +272,9 @@ def draw_router_transmission(ld, r, path, img_idx):
                 path_thinkness = 2.0
 
     # draw dots over all
-    for i in range(NO_ROUTER):
+    for i in range(len(r)):
         router = r[i]
-        x = router.pos_x
-        y = router.pos_y
+        x, y = router.coordinates()
 
         ctx.set_line_width(0.0)
         ctx.set_source_rgb(0, 0, 0)
@@ -305,7 +304,7 @@ def image_merge(ld, img_idx):
 
 def draw_images(ld, area, r, img_idx):
     draw_router_loc(ld, area, r, img_idx)
-    #draw_router_transmission(ld, r, img_idx)
+    draw_router_transmission(ld, area, r, img_idx)
 
     #image_merge(ld, img_idx)
 
