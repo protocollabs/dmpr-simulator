@@ -88,17 +88,35 @@ class Router:
             self.connections[interface['name']] = dict()
 
 
+    def _generate_configuration(self):
+        pass
+
+
+    def inject_configuration(self):
+        conf = self._generate_configuration()
+
+
     def register_router(self, r):
         self.r = r
-
 
     def step(self):
         self.mm.step()
         self.connect()
 
 
+    def start():
+        # forwarded to core
+        pass
+
+
+    def stop():
+        # forwarded to core
+        pass
+
+
     def coordinates(self):
         return self.mm.coordinates()
+
 
     def connect_links(self, dist, other):
         for interface in self.interfaces:
@@ -109,6 +127,7 @@ class Router:
             else:
                 if other.id in self.connections[name]:
                     del self.connections[name][other.id]
+
 
     def connect(self):
         for neighbor in self.r:
@@ -407,6 +426,12 @@ def two_router_basic():
 
     r[0].register_router(r)
     r[1].register_router(r)
+
+    r[0].connect()
+    r[0].connect()
+
+    r[0].start()
+    r[0].start()
 
     SIMU_TIME = 1000
     for sec in range(SIMU_TIME):
