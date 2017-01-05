@@ -103,7 +103,7 @@ class Router:
         c = dict()
         c["id"] = self.id
         c["rtn-msg-interval"] = "30"
-        c["rtn-msg-interval_jitter"] = "7"
+        c["rtn-msg-interval-jitter"] = "7"
         c["rtn-msg-hold-time"] = "90"
 
         c["mcast-v4-tx-addr"] = "224.0.1.1"
@@ -161,13 +161,11 @@ class Router:
 
 
     def start(self):
-        # forwarded to core
-        pass
+        self._core.start()
 
 
     def stop(self):
-        # forwarded to core
-        pass
+        self._core.stop()
 
 
     def coordinates(self):
