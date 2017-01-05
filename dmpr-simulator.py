@@ -216,14 +216,7 @@ def draw_router_loc(ld, area, r, img_idx):
         ctx.move_to(x + 10, y + 10)
         ctx.show_text(str(router.id))
 
-        # router IP prefix
-        #ctx.set_font_size(8)
-        #ctx.set_source_rgba(0.5, 1, 0.7, 0.5)
-        #ctx.move_to(x + 10, y + 20)
-        #ctx.show_text(router.prefix_v4)
-
     full_path = os.path.join(ld, "images-range" , "{0:05}.png".format(img_idx))
-    print(full_path)
     surface.write_to_png(full_path)
 
 
