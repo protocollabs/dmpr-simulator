@@ -104,12 +104,12 @@ class Router:
         self.connect()
 
 
-    def start():
+    def start(self):
         # forwarded to core
         pass
 
 
-    def stop():
+    def stop(self):
         # forwarded to core
         pass
 
@@ -161,7 +161,8 @@ def dist_update_all(r):
 
 
 def draw_router_loc(area, r, path, img_idx):
-    c_links = { 'tetra00' : (1.0, 0.15, 0.15, 1.0),  'wifi00' :(0.15, 1.0, 0.15, 1.0)}
+    color_interface_links = ((1.0, 0.15, 0.15, 1.0), (0.15, 1.0, 0.15, 1.0),
+                             (0.45, 0.2, 0.15, 1.0), (0.85, 0.5, 0.45, 1.0))
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, area.x, area.y)
@@ -176,22 +177,25 @@ def draw_router_loc(area, r, path, img_idx):
         ctx.set_line_width(0.1)
         path_thinkness = 4.0
         # iterate over links
+        interfaces_idx = 0 # len(router.interfaces)
         for i, t in enumerate(router.interfaces):
             range_ = t['range']
+            interface_name = t['name']
             ctx.set_source_rgba(*color[i])
             ctx.move_to(x, y)
             ctx.arc(x, y, range_, 0, 2 * math.pi)
             ctx.fill()
 
             # draw lines between links
-            #ctx.set_line_width(path_thinkness)
-            #for r_id, other in router.terminals[t['path_type']].connections.items():
-            #    other_x, other_y = other.pos_x, other.pos_y
-            #    ctx.move_to(x, y)
-            #    ctx.set_source_rgba(*c_links[path_type])
-            #    ctx.line_to(other_x, other_y)
-            #    ctx.stroke()
-            #path_thinkness -= 2.0
+            ctx.set_line_width(path_thinkness)
+            for r_id, r_obj in router.connections[interface_name].items():
+                other_x, other_y = r_obj.coordinates()
+                ctx.move_to(x, y)
+                ctx.set_source_rgba(*color_interface_links[interfaces_idx])
+                ctx.line_to(other_x, other_y)
+                ctx.stroke()
+            path_thinkness -= 2.0
+            interfaces_idx += 1
 
     for i in range(len(r)):
         router = r[i]
