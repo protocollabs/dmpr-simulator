@@ -79,6 +79,7 @@ class Router:
     def __init__(self, id_, interfaces=None, mm=None, log_directory=None):
         self.id = id_
         self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
+        self._log_directory = log_directory
         assert(mm)
         self.mm = mm
         assert(interfaces)
@@ -87,14 +88,59 @@ class Router:
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
         self.transmission_within_second = False
+        self.inject_configuration()
 
 
     def _generate_configuration(self):
-        pass
+        c = dict()
+        c["id"] = self.id
+        c["rtn_msg_interval"] = "30"
+        c["rtn_msg_interval_jitter"] = "7"
+        c["rtn_msg_hold_time"] = "90"
 
+        c["mcast_v4_tx_addr"] = "224.0.1.1"
+        c["mcast_v6_tx_addr"] = "ff05:0:0:0:0:0:0:2"
+        c["proto_transport_enable"] = [ "v4"  ]
+
+        c["interfaces"] = list()
+        for interface in self.interfaces:
+            entry = dict()
+            entry["name"] = interface["name"]
+            entry["addr-v4"] = self._rand_ip_addr("v4")
+            entry["addr-v6"] = self._rand_ip_addr("v6")
+
+            entry["link-characteristics"] = dict()
+            characteristics = ("bandwidth", "loss")
+            for characteristic in characteristics:
+                if characteristic in interface:
+                    entry["link-characteristics"][characteristic] = interface[characteristic]
+            c["interfaces"].append(entry)
+
+        c["networks"] = list()
+        for i in range(2):
+            entry = dict()
+            entry["proto"] = "v4"
+            prefix, prefix_len = self._rand_ip_prefix("v4")
+            entry["prefix"] = prefix
+            entry["prefix-len"] = prefix_len
+            c["networks"].append(entry)
+
+        return c
+
+
+    def _dump_config(self, config):
+        dir_ = os.path.join(self._log_directory, "configs")
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+        fn = os.path.join(dir_, self.id)
+        with open(fn, 'w') as fd:
+            fd.write("\n" * 2)
+            fd.write(pprint.pformat(config))
+            fd.write("\n" * 3)
 
     def inject_configuration(self):
         conf = self._generate_configuration()
+        self._dump_config(conf)
 
 
     def register_router(self, r):
@@ -140,25 +186,33 @@ class Router:
             self.connect_links(dist, neighbor)
 
 
+    def _rand_ip_prefix(self, type_):
+        if type_ == "v4":
+            addr = random.randint(0, 4000000000)
+            a = socket.inet_ntoa(struct.pack("!I", addr))
+            b = a.split(".")
+            c = "{}.{}.{}.0".format(b[0], b[1], b[2])
+            return c, 24
+        if type_ == "v6":
+            addr = ':'.join('{:x}'.format(random.randint(0, 2**16 - 1)) for i in range(4))
+            addr += "::"
+            return addr, 64
+        raise Exception("only IPv4/IPv6 supported")
 
-def rand_ip_prefix(type_):
-    if type_ != "v4":
-        raise Exception("Only v4 prefixes supported for now")
-    addr = random.randint(0, 4000000000)
-    a = socket.inet_ntoa(struct.pack("!I", addr))
-    b = a.split(".")
-    c = "{}.{}.{}.0/24".format(b[0], b[1], b[2])
-    return c
+    def _rand_ip_addr(self, type_):
+        if type_ == "v4":
+            addr = random.randint(0, 4000000000)
+            a = socket.inet_ntoa(struct.pack("!I", addr))
+            b = a.split(".")
+            c = "{}.{}.{}.{}".format(b[0], b[1], b[2], b[3])
+            return c
+        if type_ == "v6":
+            return ':'.join('{:x}'.format(random.randint(0, 2**16 - 1)) for i in range(8))
+        raise Exception("only IPv4/IPv6 supported")
 
 
-def dist_update_all(r):
-    for i in range(NO_ROUTER):
-        for j in range(NO_ROUTER):
-            if i == j: continue
-            i_pos = r[i].pos()
-            j_pos = r[j].pos()
-            dist = math.hypot(i_pos[1] - j_pos[1], i_pos[0] - j_pos[0])
-            r[j].dist_update(dist, r[i])
+
+
 
 
 def draw_router_loc(ld, area, r, img_idx):
