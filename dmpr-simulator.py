@@ -306,7 +306,7 @@ def draw_images(ld, area, r, img_idx):
     draw_router_loc(ld, area, r, img_idx)
     draw_router_transmission(ld, area, r, img_idx)
 
-    #image_merge(ld, img_idx)
+    image_merge(ld, img_idx)
 
 
 def setup_img_folder(scenerio_name):
