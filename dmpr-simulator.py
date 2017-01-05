@@ -95,6 +95,9 @@ class Router:
     def _setup_core(self):
         self._core = core.dmpr.DMPR(log=self.log)
 
+        self._core.register_routing_table_update_cb(self.routing_table_update_cb)
+        self._core.register_msg_tx_cb(self.msg_tx_cb)
+
         conf = self._gen_configuration()
         self._core.register_configuration(conf)
 
@@ -151,17 +154,30 @@ class Router:
         self._dump_config(conf)
         return conf
 
+    def routing_table_update_cb(self, routing_table):
+        """ this function is called when core stated
+        that the routing table should be updated
+        """
+        self.log.info("routing table update")
+
+    def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
+        """ this function is called when core stated
+        that a routing message must be transmitted
+        """
+        self.log.info("msg transmission")
+
 
     def register_router(self, r):
         self.r = r
 
-    def step(self):
+    def step(self, time):
         self.mm.step()
         self.connect()
+        self._core.tick(time)
 
 
-    def start(self):
-        self._core.start()
+    def start(self, time):
+        self._core.start(time)
 
 
     def stop(self):
@@ -408,7 +424,7 @@ class StaticMobilityModel(object):
         return self.x, self.y
 
     def step(self):
-        # static
+        # static, nothing
         pass
 
 
@@ -492,17 +508,17 @@ def two_router_static_in_range(scenario_name):
     r[1].register_router(r)
 
     r[0].connect()
-    r[0].connect()
+    r[1].connect()
 
-    r[0].start()
-    r[0].start()
+    r[0].start(0)
+    r[1].start(0)
 
     SIMU_TIME = 1000
     for sec in range(SIMU_TIME):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
         for i in range(len(r)):
-            r[i].step()
+            r[i].step(sec)
         draw_images(ld, area, r, sec)
 
 
