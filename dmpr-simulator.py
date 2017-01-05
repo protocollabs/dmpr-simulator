@@ -47,16 +47,16 @@ PATH_IMAGES_MERGE = "images-merge"
 
 class LoggerClone:
 
-    def calc_file_path(self, id_):
+    def calc_file_path(self, directory, id_):
         try:
             val = "{0:05}.log".format(int(id_))
         except ValueError:
             val = "{}.log".format(str(id_))
-        return os.path.join(PATH_LOGS, val)
+        return os.path.join(directory, val)
 
 
-    def __init__(self, id_):
-        file_path = self.calc_file_path(id_)
+    def __init__(self, directory, id_):
+        file_path = self.calc_file_path(directory, id_)
         self._log_fd = open(file_path, 'w')
 
 
@@ -76,9 +76,9 @@ class LoggerClone:
 class Router:
 
 
-    def __init__(self, id_, interfaces=None, mm=None):
+    def __init__(self, id_, interfaces=None, mm=None, log_directory=None):
         self.id = id_
-        self.log = LoggerClone(id_)
+        self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
         assert(mm)
         self.mm = mm
         assert(interfaces)
@@ -160,7 +160,7 @@ def dist_update_all(r):
             r[j].dist_update(dist, r[i])
 
 
-def draw_router_loc(area, r, path, img_idx):
+def draw_router_loc(ld, area, r, img_idx):
     color_interface_links = ((1.0, 0.15, 0.15, 1.0), (0.15, 1.0, 0.15, 1.0),
                              (0.45, 0.2, 0.15, 1.0), (0.85, 0.5, 0.45, 1.0))
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
@@ -173,11 +173,12 @@ def draw_router_loc(area, r, path, img_idx):
         router = r[i]
         x, y = router.coordinates()
 
-        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05))
+        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
+                 (0.5, 1.0, 0.0, 0.05), (1.0, 0.5, 1.0, 0.05))
         ctx.set_line_width(0.1)
-        path_thinkness = 4.0
+        path_thinkness = 5.0
         # iterate over links
-        interfaces_idx = 0 # len(router.interfaces)
+        interfaces_idx = 0
         for i, t in enumerate(router.interfaces):
             range_ = t['range']
             interface_name = t['name']
@@ -194,7 +195,7 @@ def draw_router_loc(area, r, path, img_idx):
                 ctx.set_source_rgba(*color_interface_links[interfaces_idx])
                 ctx.line_to(other_x, other_y)
                 ctx.stroke()
-            path_thinkness -= 2.0
+            path_thinkness -= 1.0
             interfaces_idx += 1
 
     for i in range(len(r)):
@@ -220,11 +221,12 @@ def draw_router_loc(area, r, path, img_idx):
         #ctx.move_to(x + 10, y + 20)
         #ctx.show_text(router.prefix_v4)
 
-    full_path = os.path.join(path, "{0:05}.png".format(img_idx))
+    full_path = os.path.join(ld, "images-range" , "{0:05}.png".format(img_idx))
+    print(full_path)
     surface.write_to_png(full_path)
 
 
-def draw_router_transmission(r, path, img_idx):
+def draw_router_transmission(ld, r, path, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, SIMU_AREA_X, SIMU_AREA_Y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, SIMU_AREA_X, SIMU_AREA_Y)
@@ -281,14 +283,14 @@ def draw_router_transmission(r, path, img_idx):
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
-    full_path = os.path.join(path, "{0:05}.png".format(img_idx))
+    full_path = os.path.join(ld, "images-tx" , "{0:05}.png".format(img_idx))
     surface.write_to_png(full_path)
 
 
-def image_merge(merge_path, range_path, tx_path, img_idx):
-    m_path = os.path.join(merge_path, "{0:05}.png".format(img_idx))
-    r_path = os.path.join(range_path, "{0:05}.png".format(img_idx))
-    t_path = os.path.join(tx_path,    "{0:05}.png".format(img_idx))
+def image_merge(ld, img_idx):
+    m_path = os.path.join(ld, "images-range-tx-merge", "{0:05}.png".format(img_idx))
+    r_path = os.path.join(ld, "images-range", "{0:05}.png".format(img_idx))
+    t_path = os.path.join(ld, "images-tx", "{0:05}.png".format(img_idx))
 
     images = map(Image.open, [r_path, t_path])
     new_im = Image.new('RGB', (1920, 1080))
@@ -301,18 +303,19 @@ def image_merge(merge_path, range_path, tx_path, img_idx):
     new_im.save(m_path, "PNG")
 
 
-def draw_images(area, r, img_idx):
-    draw_router_loc(area, r, PATH_IMAGES_RANGE, img_idx)
-    #draw_router_transmission(r, PATH_IMAGES_TX, img_idx)
+def draw_images(ld, area, r, img_idx):
+    draw_router_loc(ld, area, r, img_idx)
+    #draw_router_transmission(ld, r, img_idx)
 
-    #image_merge(PATH_IMAGES_MERGE, PATH_IMAGES_RANGE, PATH_IMAGES_TX, img_idx)
+    #image_merge(ld, img_idx)
 
 
-def setup_img_folder():
-    for path in (PATH_IMAGES_RANGE, PATH_IMAGES_TX, PATH_IMAGES_MERGE):
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        os.makedirs(path)
+def setup_img_folder(scenerio_name):
+    for path in ("images-range", "images-tx", "images-range-tx-merge"):
+        f_path = os.path.join("run-data", scenerio_name, path)
+        if os.path.exists(f_path):
+            shutil.rmtree(f_path)
+        os.makedirs(f_path)
 
 
 def gen_data_packet(src_id, dst_id, tos='low-loss'):
@@ -324,10 +327,11 @@ def gen_data_packet(src_id, dst_id, tos='low-loss'):
     return packet
 
 
-def setup_log_folder():
-    if os.path.exists(PATH_LOGS):
-        shutil.rmtree(PATH_LOGS)
-    os.makedirs(PATH_LOGS)
+def setup_log_folder(scenario_name):
+    ld = os.path.join("run-data", scenario_name, "logs")
+    if os.path.exists(ld):
+        shutil.rmtree(ld)
+    os.makedirs(ld)
 
 
 class MobilityArea(object):
@@ -414,7 +418,8 @@ class MobilityModel(object):
 
 
 
-def two_router_basic():
+def two_router_static_in_range(scenario_name):
+    ld = os.path.join("run-data", scenario_name)
 
     interfaces = [
         { "name" : "wifi0",  "range" : 210, "bandwidth" : 5000, "loss" : 5},
@@ -424,9 +429,9 @@ def two_router_basic():
     area = MobilityArea(600, 500)
     r = []
     mm = StaticMobilityModel(area, 200, 250)
-    r.append(Router("1", interfaces=interfaces, mm=mm))
+    r.append(Router("1", interfaces=interfaces, mm=mm, log_directory=ld))
     mm = StaticMobilityModel(area, 400, 250)
-    r.append(Router("2", interfaces=interfaces, mm=mm))
+    r.append(Router("2", interfaces=interfaces, mm=mm, log_directory=ld))
 
     r[0].register_router(r)
     r[1].register_router(r)
@@ -443,7 +448,7 @@ def two_router_basic():
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
         for i in range(len(r)):
             r[i].step()
-        draw_images(area, r, sec)
+        draw_images(ld, area, r, sec)
 
 
     #src_id = random.randint(0, NO_ROUTER - 1)
@@ -461,7 +466,7 @@ def two_router_basic():
 
 
 scenarios = [
-        [ "two-router-basis", two_router_basic ]
+        [ "001-two-router-static-in-range", two_router_static_in_range ]
 ]
 
 def die():
@@ -478,9 +483,9 @@ def main():
 
     for scenario in scenarios:
         if scenario_name == scenario[0]:
-            setup_img_folder()
-            setup_log_folder()
-            scenario[1]()
+            setup_img_folder(scenario[0])
+            setup_log_folder(scenario[0])
+            scenario[1](scenario[0])
             #cmd = "ffmpeg -framerate 10 -pattern_type glob -i 'images-merge/*.png' -c:v libx264 -pix_fmt yuv420p mdvrd.mp4"
             #print("now execute \"{}\" to generate a video".format(cmd))
             sys.exit(0)
