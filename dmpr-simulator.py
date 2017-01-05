@@ -61,7 +61,7 @@ class LoggerClone:
         self._log_fd = open(file_path, 'w')
 
 
-    def msg(self, msg, time=str(datetime.datetime.now())):
+    def msg(self, msg, time=None):
         msg = "{} {}\n".format(time, msg)
         self._log_fd.write(msg)
 
@@ -165,7 +165,7 @@ class Router:
         that a routing message must be transmitted
         """
         msg = "msg transmission [interface:{}, proto:{}, addr:{}]"
-        self.log.info(msg.format(interface_name, proto, dst_mcast_addr))
+        self.log.info(msg.format(interface_name, proto, dst_mcast_addr), time=self._core._get_time())
 
 
     def register_router(self, r):
