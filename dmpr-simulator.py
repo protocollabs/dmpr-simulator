@@ -20,6 +20,7 @@ import shutil
 import copy
 from PIL import Image
 
+import core.dmpr
 
 
 NO_ROUTER = 100
@@ -88,19 +89,26 @@ class Router:
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
         self.transmission_within_second = False
-        self.inject_configuration()
+
+        self._setup_core()
+
+    def _setup_core(self):
+        self._core = core.dmpr.DMPR(log=self.log)
+
+        conf = self._gen_configuration()
+        self._core.register_configuration(conf)
 
 
     def _generate_configuration(self):
         c = dict()
         c["id"] = self.id
-        c["rtn_msg_interval"] = "30"
-        c["rtn_msg_interval_jitter"] = "7"
-        c["rtn_msg_hold_time"] = "90"
+        c["rtn-msg-interval"] = "30"
+        c["rtn-msg-interval_jitter"] = "7"
+        c["rtn-msg-hold-time"] = "90"
 
-        c["mcast_v4_tx_addr"] = "224.0.1.1"
-        c["mcast_v6_tx_addr"] = "ff05:0:0:0:0:0:0:2"
-        c["proto_transport_enable"] = [ "v4"  ]
+        c["mcast-v4-tx-addr"] = "224.0.1.1"
+        c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
+        c["proto-transport-enable"] = [ "v4"  ]
 
         c["interfaces"] = list()
         for interface in self.interfaces:
@@ -138,9 +146,10 @@ class Router:
             fd.write(pprint.pformat(config))
             fd.write("\n" * 3)
 
-    def inject_configuration(self):
+    def _gen_configuration(self):
         conf = self._generate_configuration()
         self._dump_config(conf)
+        return conf
 
 
     def register_router(self, r):
@@ -210,6 +219,8 @@ class Router:
             return ':'.join('{:x}'.format(random.randint(0, 2**16 - 1)) for i in range(8))
         raise Exception("only IPv4/IPv6 supported")
 
+    def _id_generator(self):
+        return str(uuid.uuid1())
 
 
 
