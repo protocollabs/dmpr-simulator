@@ -1,5 +1,9 @@
 ## Dynamic Mulitpath Routing Protocol - Simulator
 
+### What is DMPR?
+
+[![DMPR Promo Video](https://img.youtube.com/vi/PypxZ2UQi3E/0.jpg)](https://www.youtube.com/watch?v=PypxZ2UQi3E)
+
 ### Installation
 
 This repository uses git submodules to include DMPD core component. Do not
