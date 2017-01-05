@@ -4,7 +4,7 @@
 
 Is simulate a wide variety of different network topologies, with different mobility models, link and path characteristics by using the same dmpr core code which is used in the Linux implementation as well.
 
-[![DMPR Promo Video](https://img.youtube.com/vi/PypxZ2UQi3E/0.jpg)](https://www.youtube.com/watch?v=PypxZ2UQi3E)
+[![DMPR Promo Video](http://img.youtube.com/vi/PypxZ2UQi3E/maxresdefault.jpg)](https://www.youtube.com/watch?v=PypxZ2UQi3E)
 
 ### Installation
 
