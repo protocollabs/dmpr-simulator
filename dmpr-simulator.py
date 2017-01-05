@@ -164,7 +164,8 @@ class Router:
         """ this function is called when core stated
         that a routing message must be transmitted
         """
-        self.log.info("msg transmission")
+        msg = "msg transmission [interface:{}, proto:{}, addr:{}]"
+        self.log.info(msg.format(interface_name, proto, dst_mcast_addr))
 
 
     def register_router(self, r):
