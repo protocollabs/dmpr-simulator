@@ -115,7 +115,7 @@ class Router:
         c["id"] = self.id
         c["rtn-msg-interval"] = "30"
         c["rtn-msg-interval-jitter"] = "7"
-        c["rtn-msg-hold-time"] = "10"
+        c["rtn-msg-hold-time"] = "90"
 
         c["mcast-v4-tx-addr"] = "224.0.1.1"
         c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
@@ -176,7 +176,7 @@ class Router:
         return "{}.{}.{}.0".format(ip_tuple[0], ip_tuple[1], ip_tuple[2])
 
 
-    def _route_lookup(self, packet)
+    def _route_lookup(self, packet):
         tos = packet['tos'] # e.g. "lowest-lost"
         dst_ip = packet['ip-dst']
         dst_ip_normalized = self._ip_addr_to_prefix(dst)
