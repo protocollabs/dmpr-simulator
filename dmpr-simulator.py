@@ -162,6 +162,42 @@ class Router:
         that the routing table should be updated
         """
         self.log.info("routing table update")
+        self._routing_table = routing_table
+
+    def _route_lookup(self, packet)
+        dst_ip = packet['ip-dst']
+        tos = packet['tos'] # e.g. "lowest-lost"
+        dst_ip_normalized = "{}.{}.{}.0".format(dst.split(".")[0], dst.split(".")[1], dst.split(".")[2])
+        if not tos in self._routing_table:
+            print("no policy routing table named: {}".format(tos))
+            print("ICMP, no route to host or take default path?")
+            return
+        specific_table = self._routing_table[tos]
+        for entry in specific_table:
+            if entry['proto'] != "v4":
+                print("not ipv4, skipping")
+                continue
+            if entry['prefix-len'] != "24":
+                raise Exception("prefixlen != 24, this is not allowed for the simulation")
+            if entry['prefix'] == dst_ip_normalized:
+                print("found, next hop")
+                return True, entry['next-hop'], entry['interface']
+        return False, None, None
+
+
+    def data_packet_forward(self, packet):
+        """ this is a toy version of a forwarding algorithm.
+        A first match algorithm because we make sure that no
+        other network is available in a simulation with the
+        same root"""
+        ok, next_hop_ip, interface_name = self._route_lookup(packet)
+        if not ok:
+            print("route lookup failed, drop packet, no next hop")
+            return
+
+
+    def data_packet_rx(self, packet, interface):
+        pass
 
 
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
