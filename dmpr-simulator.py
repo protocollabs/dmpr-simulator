@@ -166,7 +166,8 @@ class Router:
         fn = os.path.join(dir_, self.id)
         with open(fn, 'w') as fd:
             fd.write("\n" * 2)
-            fd.write(pprint.pformat(config))
+            fd.write(json.dumps(config, sort_keys=True,
+                     indent=4, separators=(',', ': ')))
             fd.write("\n" * 3)
 
 
