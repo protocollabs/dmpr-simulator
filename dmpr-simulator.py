@@ -86,6 +86,7 @@ class Router:
         assert(interfaces)
         self.interfaces=interfaces
         self.connections = dict()
+        self._gen_own_networks()
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
         self.transmission_within_second = False
@@ -101,6 +102,12 @@ class Router:
 
         conf = self._gen_configuration()
         self._core.register_configuration(conf)
+
+
+    def _gen_own_networks(self):
+        self._own_networks_v4 = list()
+        for i in range(2):
+            self._own_networks_v4.append(self._rand_ip_prefix("v4"))
 
 
     def _generate_configuration(self):
@@ -129,12 +136,11 @@ class Router:
             c["interfaces"].append(entry)
 
         c["networks"] = list()
-        for i in range(2):
+        for ip in self._own_networks_v4:
             entry = dict()
             entry["proto"] = "v4"
-            prefix, prefix_len = self._rand_ip_prefix("v4")
-            entry["prefix"] = prefix
-            entry["prefix-len"] = prefix_len
+            entry["prefix"] = ip[0]
+            entry["prefix-len"] = ip[1]
             c["networks"].append(entry)
 
         return c
@@ -164,10 +170,16 @@ class Router:
         self.log.info("routing table update")
         self._routing_table = routing_table
 
+
+    def _ip_addr_to_prefix(self, ip_addr):
+        ip_tuple = ip_addr.split(".")
+        return "{}.{}.{}.0".format(ip_tuple[0], ip_tuple[1], ip_tuple[2])
+
+
     def _route_lookup(self, packet)
-        dst_ip = packet['ip-dst']
         tos = packet['tos'] # e.g. "lowest-lost"
-        dst_ip_normalized = "{}.{}.{}.0".format(dst.split(".")[0], dst.split(".")[1], dst.split(".")[2])
+        dst_ip = packet['ip-dst']
+        dst_ip_normalized = self._ip_addr_to_prefix(dst)
         if not tos in self._routing_table:
             print("no policy routing table named: {}".format(tos))
             print("ICMP, no route to host or take default path?")
@@ -185,7 +197,7 @@ class Router:
         return False, None, None
 
 
-    def data_packet_forward(self, packet):
+    def _data_packet_forward(self, packet):
         """ this is a toy version of a forwarding algorithm.
         A first match algorithm because we make sure that no
         other network is available in a simulation with the
@@ -196,8 +208,32 @@ class Router:
             return
 
 
+    def _data_packet_update_ttl(self, packet):
+        if packet['ttl'] <= 0:
+            print("ttl is 0, drop packet")
+            return False
+        packet['ttl'] -= 1
+        return True
+
+
+    def _data_packet_reached_dst(self, packet):
+        dst_ip = packet['dst-ip']
+        dst_ip_prefix = self._ip_addr_to_prefix(dst_ip)
+        for addr in self._own_networks_v4:
+            if addr == dst_ip_prefix:
+                return True
+        return False
+
+
     def data_packet_rx(self, packet, interface):
-        pass
+        """ received from a neighbor """
+        ok = self._data_packet_update_ttl(packet)
+        if not ok:
+            return
+        if self._data_packet_reached_dst(packet):
+            print("packet reached destination")
+            return
+        self._data_packet_forward(packet)
 
 
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
