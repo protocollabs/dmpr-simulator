@@ -86,9 +86,14 @@ class Router:
         assert(interfaces)
         self.interfaces=interfaces
         self.connections = dict()
+        self.interface_addr = dict()
         self._gen_own_networks()
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
+            self.interface_addr[interface['name']] = dict()
+            self.interface_addr[interface['name']]['v4'] = self._rand_ip_addr("v4")
+            self.interface_addr[interface['name']]['v6'] = self._rand_ip_addr("v6")
+
         self.transmission_within_second = False
 
         self._setup_core()
@@ -101,6 +106,7 @@ class Router:
         self._core.register_get_time_cb(self.get_time)
 
         conf = self._gen_configuration()
+        self._conf = conf
         self._core.register_configuration(conf)
 
 
@@ -108,6 +114,14 @@ class Router:
         self._own_networks_v4 = list()
         for i in range(2):
             self._own_networks_v4.append(self._rand_ip_prefix("v4"))
+
+
+    def get_router_by_interface_addr(self, addr):
+        for router in self.router:
+            for interface, v in router.interface_addr.keys():
+                if v['v4'] == addr:
+                    return router
+        return None
 
 
     def _generate_configuration(self):
@@ -125,8 +139,8 @@ class Router:
         for interface in self.interfaces:
             entry = dict()
             entry["name"] = interface["name"]
-            entry["addr-v4"] = self._rand_ip_addr("v4")
-            entry["addr-v6"] = self._rand_ip_addr("v6")
+            entry["addr-v4"] = self.interface_addr[interface['name']]['v4']
+            entry["addr-v6"] = self.interface_addr[interface['name']]['v6']
 
             entry["link-characteristics"] = dict()
             characteristics = ("bandwidth", "loss")
@@ -142,7 +156,6 @@ class Router:
             entry["prefix"] = ip[0]
             entry["prefix-len"] = ip[1]
             c["networks"].append(entry)
-
         return c
 
 
@@ -206,6 +219,11 @@ class Router:
         if not ok:
             print("route lookup failed, drop packet, no next hop")
             return
+        r = self.get_router_by_interface_addr(next_hop_ip)
+        if not r:
+            print("fck")
+            return
+        r.data_packet_rx(packet, interface_name)
 
 
     def _data_packet_update_ttl(self, packet):
