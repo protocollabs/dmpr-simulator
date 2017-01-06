@@ -108,7 +108,7 @@ class Router:
         c["id"] = self.id
         c["rtn-msg-interval"] = "30"
         c["rtn-msg-interval-jitter"] = "7"
-        c["rtn-msg-hold-time"] = "90"
+        c["rtn-msg-hold-time"] = "10"
 
         c["mcast-v4-tx-addr"] = "224.0.1.1"
         c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
@@ -150,10 +150,12 @@ class Router:
             fd.write(pprint.pformat(config))
             fd.write("\n" * 3)
 
+
     def _gen_configuration(self):
         conf = self._generate_configuration()
         self._dump_config(conf)
         return conf
+
 
     def routing_table_update_cb(self, routing_table):
         """ this function is called when core stated
@@ -161,19 +163,31 @@ class Router:
         """
         self.log.info("routing table update")
 
+
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
         """ this function is called when core stated
         that a routing message must be transmitted
         """
-        msg = "msg transmission [interface:{}, proto:{}, addr:{}]"
-        self.log.info(msg.format(interface_name, proto, dst_mcast_addr), time=self._core._get_time())
+        emsg = "msg transmission [interface:{}, proto:{}, addr:{}]"
+        self.log.info(emsg.format(interface_name, proto, dst_mcast_addr),
+                      time=self.get_time())
+        # send message to all connected routers
+        for r_id, r_obj in self.connections[interface_name].items():
+            r_obj.msg_rx(interface_name, msg)
+
+
+    def msg_rx(self, interface_name, msg):
+        # forward to core
+        self._core.msg_rx(interface_name, msg)
 
 
     def register_router(self, r):
         self.r = r
 
+
     def get_time(self):
         return self._time
+
 
     def step(self, time):
         self._time = time
