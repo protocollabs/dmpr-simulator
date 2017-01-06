@@ -97,6 +97,7 @@ class Router:
 
         self._core.register_routing_table_update_cb(self.routing_table_update_cb)
         self._core.register_msg_tx_cb(self.msg_tx_cb)
+        self._core.register_get_time_cb(self.get_time)
 
         conf = self._gen_configuration()
         self._core.register_configuration(conf)
@@ -171,14 +172,19 @@ class Router:
     def register_router(self, r):
         self.r = r
 
+    def get_time(self):
+        return self._time
+
     def step(self, time):
+        self._time = time
         self.mm.step()
         self.connect()
-        self._core.tick(time)
+        self._core.tick()
 
 
     def start(self, time):
-        self._core.start(time)
+        self._time = time
+        self._core.start()
 
 
     def stop(self):
