@@ -604,8 +604,8 @@ def two_router_static_in_range(scenario_name):
     ld = os.path.join("run-data", scenario_name)
 
     interfaces = [
-        { "name" : "wifi0",  "range" : 210, "bandwidth" : 5000, "loss" : 5},
-        { "name" : "tetra0", "range" : 250, "bandwidth" : 5000, "loss" : 10}
+        { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
+        { "name" : "tetra0", "range" : 350, "bandwidth" : 1000, "loss" : 5}
     ]
 
     area = MobilityArea(600, 500)
