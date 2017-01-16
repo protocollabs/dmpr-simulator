@@ -648,8 +648,39 @@ def two_router_static_in_range(scenario_name):
     #    r[src_id].forward_data_packet(packet_high_througput)
 
 
+def two_hundr_router_static_in_range(scenario_name):
+    ld = os.path.join("run-data", scenario_name)
+
+    interfaces = [
+        { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
+        { "name" : "tetra0", "range" : 350, "bandwidth" : 1000, "loss" : 5}
+    ]
+
+    area = MobilityArea(600, 500)
+    r = []
+    no_routers = 20
+    for i in range(no_routers):
+        x = random.randint(190, 210)
+        y = random.randint(240, 260)
+        mm = StaticMobilityModel(area, x, y)
+        r.append(Router(str(i), interfaces=interfaces, mm=mm, log_directory=ld))
+        r[i].register_router(r)
+        r[i].connect()
+        r[i].start(0)
+
+
+    SIMU_TIME = 1000
+    for sec in range(SIMU_TIME):
+        sep = '=' * 50
+        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
+        for i in range(len(r)):
+            r[i].step(sec)
+        draw_images(ld, area, r, sec)
+
+
 scenarios = [
-        [ "001-two-router-static-in-range", two_router_static_in_range ]
+        [ "001-two-router-static-in-range", two_router_static_in_range ],
+        [ "002-20-router-static-in-range", two_hundr_router_static_in_range ]
 ]
 
 def die():
