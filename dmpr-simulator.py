@@ -18,6 +18,7 @@ import addict
 import cairo
 import shutil
 import copy
+import lzma
 from PIL import Image
 
 import core.dmpr
@@ -77,10 +78,11 @@ class LoggerClone:
 class Router:
 
 
-    def __init__(self, id_, interfaces=None, mm=None, log_directory=None):
+    def __init__(self, id_, interfaces=None, mm=None, log_directory=None, msg_compress=True):
         self.id = id_
         self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
         self._log_directory = log_directory
+        self._do_msg_compress = msg_compress
         assert(mm)
         self.mm = mm
         assert(interfaces)
@@ -97,6 +99,7 @@ class Router:
         self.transmission_within_second = False
 
         self._setup_core()
+
 
     def _setup_core(self):
         self._core = core.dmpr.DMPR(log=self.log)
@@ -255,7 +258,25 @@ class Router:
         self._data_packet_forward(packet)
 
 
+    def _msg_compress(self, msg):
+        msg_bin = msg.encode("ascii", "ignore")
+        msg_comp = lzma.compress(msg_bin)
+        return msg_comp
+
+
+    def _msg_decompress(self, msg):
+        msg_bin = lzma.decompress(msg)
+        msg_str = msg_bin.decode('ascii')
+        return msg_str
+
+
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
+        print(pprint.pformat(msg))
+        msg_json = json.dumps(msg)
+        print("message size: {} bytes (uncompressed)".format(len(msg_json)))
+        if self._do_msg_compress:
+            msg = self._msg_compress(msg_json)
+            print("message size: {} bytes (compressed)".format(len(msg)))
         """ this function is called when core stated
         that a routing message must be transmitted
         """
@@ -268,8 +289,10 @@ class Router:
 
 
     def msg_rx(self, interface_name, msg):
-        # forward to core
-        self._core.msg_rx(interface_name, msg)
+        if self._do_msg_compress:
+            msg = self._msg_decompress(msg)
+        msg_dict = json.loads(msg)
+        self._core.msg_rx(interface_name, msg_dict)
 
 
     def register_router(self, r):
@@ -658,10 +681,10 @@ def two_hundr_router_static_in_range(scenario_name):
 
     area = MobilityArea(600, 500)
     r = []
-    no_routers = 20
+    no_routers = 50
     for i in range(no_routers):
-        x = random.randint(190, 210)
-        y = random.randint(240, 260)
+        x = random.randint(200, 400)
+        y = random.randint(200, 300)
         mm = StaticMobilityModel(area, x, y)
         r.append(Router(str(i), interfaces=interfaces, mm=mm, log_directory=ld))
         r[i].register_router(r)
