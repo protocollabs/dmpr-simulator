@@ -104,9 +104,9 @@ class Router:
     def _setup_core(self):
         self._core = core.dmpr.DMPR(log=self.log)
 
-        self._core.register_routing_table_update_cb(self.routing_table_update_cb)
-        self._core.register_msg_tx_cb(self.msg_tx_cb)
-        self._core.register_get_time_cb(self.get_time)
+        self._core.register_routing_table_update_cb(self.routing_table_update_cb, priv_data=None)
+        self._core.register_msg_tx_cb(self.msg_tx_cb, priv_data=None)
+        self._core.register_get_time_cb(self.get_time, priv_data=None)
 
         conf = self._gen_configuration()
         self._conf = conf
@@ -180,7 +180,7 @@ class Router:
         return conf
 
 
-    def routing_table_update_cb(self, routing_table):
+    def routing_table_update_cb(self, routing_table, priv_data=None):
         """ this function is called when core stated
         that the routing table should be updated
         """
@@ -270,8 +270,8 @@ class Router:
         return msg_str
 
 
-    def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
-        print(pprint.pformat(msg))
+    def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg, priv_data=None):
+        #print(pprint.pformat(msg))
         msg_json = json.dumps(msg)
         print("message size: {} bytes (uncompressed)".format(len(msg_json)))
         if self._do_msg_compress:
@@ -299,7 +299,7 @@ class Router:
         self.r = r
 
 
-    def get_time(self):
+    def get_time(self, priv_data=None):
         return self._time
 
 
@@ -681,7 +681,7 @@ def two_hundr_router_static_in_range(scenario_name):
 
     area = MobilityArea(600, 500)
     r = []
-    no_routers = 50
+    no_routers = 20
     for i in range(no_routers):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
