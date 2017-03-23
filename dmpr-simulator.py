@@ -372,32 +372,94 @@ class Router:
         return str(uuid.uuid1())
 
 
+def color_links_light(index):
+    table = ((0.294, 0.000, 0.510, 1.0), (1.000, 0.855, 0.725, 1.0),
+             (0.000, 1.000, 0.498, 1.0), (1.000, 0.647, 0.000, 1.0))
+    return table[index]
+
+def color_links_dark(index):
+    table = ((1.0, 0.15, 0.15, 1.0), (0.15, 1.0, 0.15, 1.0),
+             (0.45, 0.2, 0.15, 1.0), (0.85, 0.5, 0.45, 1.0))
+    return table[index]
+
+def color_links(args, index):
+    if args.color_scheme == "light":
+        return color_links_light(index)
+    else:
+        return color_links_dark(index)
+
+def color_db_light():
+    return (1.000, 1.000, 1.000, 1.0)
+
+def color_db_dark():
+    return (0.15, 0.15, 0.15, 1.0)
+
+def color_db(args):
+    if args.color_scheme == "light":
+        return color_db_light()
+    else:
+        return color_db_dark()
+
+def color_range_light(index):
+    color = ((0.541, 0.169, 0.886, 0.05), (1.000, 0.855, 0.725, 0.05),
+             (0.5, 1.0, 0.0, 0.05), (1.0, 0.5, 1.0, 0.05))
+    return color[index]
+
+def color_range_dark(index):
+    color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
+             (0.5, 1.0, 0.0, 0.05), (1.0, 0.5, 1.0, 0.05))
+    return color[index]
+
+def color_range(args, index):
+    if args.color_scheme == "light":
+        return color_range_light(index)
+    else:
+        return color_range_dark(index)
+
+def color_node_inner_light():
+    return (0.294, 0.000, 0.510)
+
+def color_node_inner_dark():
+    return (0.5, 1, 0.7)
+
+def color_node_inner(args):
+    if args.color_scheme == "light":
+        return color_node_inner_light()
+    else:
+        return color_node_inner_dark()
+
+def color_node_outter_light():
+    return (0., 0., 0.)
+
+def color_node_outter_dark():
+    return (0.5, 1, 0.7)
+
+def color_node_outter(args):
+    if args.color_scheme == "light":
+        return color_node_outter_light()
+    else:
+        return color_node_outter_dark()
 
 
-
-def draw_router_loc(ld, area, r, img_idx):
-    color_interface_links = ((1.0, 0.15, 0.15, 1.0), (0.15, 1.0, 0.15, 1.0),
-                             (0.45, 0.2, 0.15, 1.0), (0.85, 0.5, 0.45, 1.0))
+def draw_router_loc(args, ld, area, r, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, area.x, area.y)
-    ctx.set_source_rgba(0.15, 0.15, 0.15, 1.0)
+    ctx.set_source_rgba(*color_db(args))
     ctx.fill()
 
     for i in range(len(r)):
         router = r[i]
         x, y = router.coordinates()
 
-        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
-                 (0.5, 1.0, 0.0, 0.05), (1.0, 0.5, 1.0, 0.05))
         ctx.set_line_width(0.1)
-        path_thinkness = 5.0
+        path_thinkness = 7.0
         # iterate over links
         interfaces_idx = 0
         for i, t in enumerate(router.interfaces):
             range_ = t['range']
             interface_name = t['name']
-            ctx.set_source_rgba(*color[i])
+            ctx.set_source_rgba(*color_range(args, i))
             ctx.move_to(x, y)
             ctx.arc(x, y, range_, 0, 2 * math.pi)
             ctx.fill()
@@ -407,10 +469,10 @@ def draw_router_loc(ld, area, r, img_idx):
             for r_id, r_obj in router.connections[interface_name].items():
                 other_x, other_y = r_obj.coordinates()
                 ctx.move_to(x, y)
-                ctx.set_source_rgba(*color_interface_links[interfaces_idx])
+                ctx.set_source_rgba(*color_links(args, interfaces_idx))
                 ctx.line_to(other_x, other_y)
                 ctx.stroke()
-            path_thinkness -= 1.0
+            path_thinkness -= 3.0
             interfaces_idx += 1
 
     for i in range(len(r)):
@@ -419,14 +481,14 @@ def draw_router_loc(ld, area, r, img_idx):
 
         # node middle point
         ctx.set_line_width(0.0)
-        ctx.set_source_rgb(0.5, 1, 0.5)
+        ctx.set_source_rgb(*color_node_inner(args))
         ctx.move_to(x, y)
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
         # router id
         ctx.set_font_size(10)
-        ctx.set_source_rgb(0.5, 1, 0.7)
+        ctx.set_source_rgb(*color_node_outter(args))
         ctx.move_to(x + 10, y + 10)
         ctx.show_text(str(router.id))
 
@@ -434,11 +496,37 @@ def draw_router_loc(ld, area, r, img_idx):
     surface.write_to_png(full_path)
 
 
-def draw_router_transmission(ld, area, r, img_idx):
+def color_transmission_circle_light():
+    return (.0, .0, .0, 1.0)
+
+def color_transmission_circle_dark():
+    return (.10, .10, .10, 1.0)
+
+def color_transmission_circle(args):
+    if args.color_scheme == "light":
+        return color_transmission_circle_light()
+    else:
+        return color_transmission_circle_dark()
+
+
+def color_tx_links_light():
+    return (.1, .1, .1, .4)
+
+def color_tx_links_dark():
+    return (.0, .0, .0, .4)
+
+def color_tx_links(args):
+    if args.color_scheme == "light":
+        return color_tx_links_light()
+    else:
+        return color_tx_links_dark()
+
+
+def draw_router_transmission(args, ld, area, r, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, area.x, area.y)
-    ctx.set_source_rgba(0.15, 0.15, 0.15, 1.0)
+    ctx.set_source_rgba(*color_db(args))
     ctx.fill()
 
     # transmitting circles
@@ -447,7 +535,7 @@ def draw_router_transmission(ld, area, r, img_idx):
         x, y = router.coordinates()
 
         if router.transmission_within_second:
-            ctx.set_source_rgba(.10, .10, .10, 1.0)
+            ctx.set_source_rgba(*color_transmission_circle(args))
             ctx.move_to(x, y)
             ctx.arc(x, y, 50, 0, 2 * math.pi)
             ctx.fill()
@@ -456,8 +544,6 @@ def draw_router_transmission(ld, area, r, img_idx):
         router = r[i]
         x, y = router.coordinates()
 
-        color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
-                (.0, 0.0, 0.5, 0.05), (1.0, 0.5, 1.0, 0.05))
         ctx.set_line_width(0.1)
         path_thinkness = 6.0
         # iterate over links
@@ -470,7 +556,7 @@ def draw_router_transmission(ld, area, r, img_idx):
             for r_id, r_obj in router.connections[interface_name].items():
                 other_x, other_y = r_obj.coordinates()
                 ctx.move_to(x, y)
-                ctx.set_source_rgba(.0, .0, .0, .4)
+                ctx.set_source_rgba(*color_tx_links(args))
                 ctx.line_to(other_x, other_y)
                 ctx.stroke()
 
@@ -484,7 +570,7 @@ def draw_router_transmission(ld, area, r, img_idx):
         x, y = router.coordinates()
 
         ctx.set_line_width(0.0)
-        ctx.set_source_rgb(0, 0, 0)
+        ctx.set_source_rgba(*color_tx_links(args))
         ctx.move_to(x, y)
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
@@ -493,7 +579,7 @@ def draw_router_transmission(ld, area, r, img_idx):
     surface.write_to_png(full_path)
 
 
-def image_merge(ld, img_idx):
+def image_merge(args, ld, img_idx):
     m_path = os.path.join(ld, "images-range-tx-merge", "{0:05}.png".format(img_idx))
     r_path = os.path.join(ld, "images-range", "{0:05}.png".format(img_idx))
     t_path = os.path.join(ld, "images-tx", "{0:05}.png".format(img_idx))
@@ -509,11 +595,11 @@ def image_merge(ld, img_idx):
     new_im.save(m_path, "PNG")
 
 
-def draw_images(ld, area, r, img_idx):
-    draw_router_loc(ld, area, r, img_idx)
-    draw_router_transmission(ld, area, r, img_idx)
+def draw_images(args, ld, area, r, img_idx):
+    draw_router_loc(args, ld, area, r, img_idx)
+    draw_router_transmission(args, ld, area, r, img_idx)
 
-    image_merge(ld, img_idx)
+    image_merge(args, ld, img_idx)
 
 
 def setup_img_folder(scenerio_name):
@@ -624,8 +710,8 @@ class MobilityModel(object):
 
 
 
-def two_router_static_in_range(scenario_name):
-    ld = os.path.join("run-data", scenario_name)
+def two_router_static_in_range(args):
+    ld = os.path.join("run-data", args.topology)
 
     interfaces = [
         { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
@@ -654,7 +740,7 @@ def two_router_static_in_range(scenario_name):
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
         for i in range(len(r)):
             r[i].step(sec)
-        draw_images(ld, area, r, sec)
+        draw_images(args, ld, area, r, sec)
 
 
     #src_id = random.randint(0, NO_ROUTER - 1)
@@ -665,14 +751,14 @@ def two_router_static_in_range(scenario_name):
     #    for i in range(NO_ROUTER):
     #        r[i].step()
     #    dist_update_all(r)
-    #    draw_images(r, sec)
+    #    draw_images(args, r, sec)
     #    # inject test data packet into network
     #    r[src_id].forward_data_packet(packet_low_loss)
     #    r[src_id].forward_data_packet(packet_high_througput)
 
 
-def two_hundr_router_static_in_range(scenario_name):
-    ld = os.path.join("run-data", scenario_name)
+def two_hundr_router_static_in_range(args):
+    ld = os.path.join("run-data", args.topology)
 
     interfaces = [
         { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
@@ -698,7 +784,7 @@ def two_hundr_router_static_in_range(scenario_name):
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
         for i in range(len(r)):
             r[i].step(sec)
-        draw_images(ld, area, r, sec)
+        draw_images(args, ld, area, r, sec)
 
 
 scenarios = [
@@ -714,6 +800,7 @@ def die():
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--topology", help="topology", type=str, default=None)
+    parser.add_argument("-c", "--color-scheme", help="color scheme: light or dark", type=str, default="dark")
     args = parser.parse_args()
     if not args.topology:
         print("--topology required, please specify a valid file path, exiting now")
@@ -730,7 +817,7 @@ def main():
         if args.topology == scenario[0]:
             setup_img_folder(scenario[0])
             setup_log_folder(scenario[0])
-            scenario[1](scenario[0])
+            scenario[1](args)
             #cmd = "ffmpeg -framerate 10 -pattern_type glob -i 'images-merge/*.png' -c:v libx264 -pix_fmt yuv420p mdvrd.mp4"
             #print("now execute \"{}\" to generate a video".format(cmd))
             sys.exit(0)
