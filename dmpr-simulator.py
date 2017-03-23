@@ -86,6 +86,7 @@ class Router:
         assert(mm)
         self.mm = mm
         assert(interfaces)
+        self._routing_table = {}
         self.interfaces=interfaces
         self.connections = dict()
         self.interface_addr = dict()
@@ -119,10 +120,15 @@ class Router:
             self._own_networks_v4.append(self._rand_ip_prefix("v4"))
 
 
+    def pick_random_configured_network(self):
+        return self._own_networks_v4[0][0]
+
+
     def get_router_by_interface_addr(self, addr):
-        for router in self.router:
-            for interface, v in router.interface_addr.keys():
-                if v['v4'] == addr:
+        for router in self.r:
+            for iface_name, iface_data in router.interface_addr.items():
+                print(router.interface_addr)
+                if iface_data['v4'] == addr:
                     return router
         return None
 
@@ -196,11 +202,11 @@ class Router:
     def _route_lookup(self, packet):
         tos = packet['tos'] # e.g. "lowest-lost"
         dst_ip = packet['ip-dst']
-        dst_ip_normalized = self._ip_addr_to_prefix(dst)
+        dst_ip_normalized = self._ip_addr_to_prefix(dst_ip)
         if not tos in self._routing_table:
             print("no policy routing table named: {}".format(tos))
             print("ICMP, no route to host or take default path?")
-            return
+            return False, None, None
         specific_table = self._routing_table[tos]
         for entry in specific_table:
             if entry['proto'] != "v4":
@@ -239,10 +245,11 @@ class Router:
 
 
     def _data_packet_reached_dst(self, packet):
-        dst_ip = packet['dst-ip']
+        dst_ip = packet['ip-dst']
         dst_ip_prefix = self._ip_addr_to_prefix(dst_ip)
+        print(self._own_networks_v4)
         for addr in self._own_networks_v4:
-            if addr == dst_ip_prefix:
+            if addr[0] == dst_ip_prefix:
                 return True
         return False
 
@@ -253,7 +260,8 @@ class Router:
         if not ok:
             return
         if self._data_packet_reached_dst(packet):
-            print("packet reached destination")
+            hops = DEFAULT_PACKET_TTL - packet['ttl']
+            print("packet reached destination with {} hops".format(hops))
             return
         self._data_packet_forward(packet)
 
@@ -610,12 +618,12 @@ def setup_img_folder(scenerio_name):
         os.makedirs(f_path)
 
 
-def gen_data_packet(src_id, dst_id, tos='low-loss'):
-    packet = addict.Dict()
-    packet.src_id = src_id
-    packet.dst_id = dst_id
-    packet.ttl = DEFAULT_PACKET_TTL
-    packet.tos = tos
+def gen_data_packet(src_id, dst_id, tos='lowest-loss'):
+    packet = dict()
+    packet['ip-src'] = src_id
+    packet['ip-dst'] = dst_id
+    packet['ttl'] = DEFAULT_PACKET_TTL
+    packet['tos'] = tos
     return packet
 
 
@@ -786,17 +794,18 @@ def two_hundr_router_static_in_range(args):
             r[i].step(sec)
         draw_images(args, ld, area, r, sec)
 
+
 def three_20_router_dynamic(args):
     ld = os.path.join("run-data", args.topology)
 
     interfaces = [
-        { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
-        { "name" : "tetra0", "range" : 350, "bandwidth" : 1000, "loss" : 5}
+        { "name" : "wifi0", "range" : 50, "bandwidth" : 8000, "loss" : 10},
+        { "name" : "tetra0", "range" : 100, "bandwidth" : 1000, "loss" : 5}
     ]
 
     area = MobilityArea(600, 500)
     r = []
-    no_routers = 20
+    no_routers = 200
     for i in range(no_routers):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
@@ -808,12 +817,18 @@ def three_20_router_dynamic(args):
 
 
     SIMU_TIME = 100
+    src_id = random.randint(0, no_routers - 1)
+    dst_id = r[random.randint(0, no_routers - 1)].pick_random_configured_network()
+    packet_high_througput = gen_data_packet(src_id, dst_id, tos='lowest-loss')
     for sec in range(SIMU_TIME):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
         for i in range(len(r)):
             r[i].step(sec)
         draw_images(args, ld, area, r, sec)
+        packet_low_loss = gen_data_packet(src_id, dst_id, tos='lowest-loss')
+        r[src_id]._data_packet_forward(packet_low_loss)
+        #r[src_id].forward_data_packet(packet_high_througput)
 
 
 scenarios = [
