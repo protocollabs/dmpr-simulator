@@ -708,18 +708,26 @@ scenarios = [
 
 def die():
     print("scenario as argument required")
-    for scenario in scenarios:
-        print("  {}".format(scenario[0]))
     sys.exit(1)
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--topology", help="topology", type=str, default=None)
+    args = parser.parse_args()
+    if not args.topology:
+        print("--topology required, please specify a valid file path, exiting now")
+        for scenario in scenarios:
+            print("  {}".format(scenario[0]))
+        sys.exit(1)
+    return args
+
+
 def main():
-    if len(sys.argv) > 1:
-        scenario_name = sys.argv[1]
-    else:
-        die()
+    args = parse_args()
 
     for scenario in scenarios:
-        if scenario_name == scenario[0]:
+        if args.topology == scenario[0]:
             setup_img_folder(scenario[0])
             setup_log_folder(scenario[0])
             scenario[1](scenario[0])
