@@ -271,6 +271,7 @@ class Router:
 
 
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg, priv_data=None):
+        self.transmission_within_second = True
         #print(pprint.pformat(msg))
         msg_json = json.dumps(msg)
         print("message size: {} bytes (uncompressed)".format(len(msg_json)))
@@ -304,6 +305,8 @@ class Router:
 
 
     def step(self, time):
+        # new round, reset to no transmission
+        self.transmission_within_second = False
         self._time = time
         self.mm.step()
         self.connect()
@@ -371,11 +374,8 @@ class Router:
     def _id_generator(self):
         return str(uuid.uuid1())
 
-
 def color_links_light(index):
-    table = ((0.294, 0.000, 0.510, 1.0), (1.000, 0.855, 0.725, 1.0),
-             (0.000, 1.000, 0.498, 1.0), (1.000, 0.647, 0.000, 1.0))
-    return table[index]
+    return (.1, .1, .1, .4)
 
 def color_links_dark(index):
     table = ((1.0, 0.15, 0.15, 1.0), (0.15, 1.0, 0.15, 1.0),
@@ -401,9 +401,7 @@ def color_db(args):
         return color_db_dark()
 
 def color_range_light(index):
-    color = ((0.541, 0.169, 0.886, 0.05), (1.000, 0.855, 0.725, 0.05),
-             (0.5, 1.0, 0.0, 0.05), (1.0, 0.5, 1.0, 0.05))
-    return color[index]
+    return (1.0, 1.0, 1.0, 0.1)
 
 def color_range_dark(index):
     color = ((1.0, 1.0, 0.5, 0.05), (1.0, 0.0, 1.0, 0.05),
@@ -417,7 +415,7 @@ def color_range(args, index):
         return color_range_dark(index)
 
 def color_node_inner_light():
-    return (0.294, 0.000, 0.510)
+    return (0.1, 0.1, 0.1)
 
 def color_node_inner_dark():
     return (0.5, 1, 0.7)
@@ -453,7 +451,7 @@ def draw_router_loc(args, ld, area, r, img_idx):
         x, y = router.coordinates()
 
         ctx.set_line_width(0.1)
-        path_thinkness = 7.0
+        path_thinkness = 6.0
         # iterate over links
         interfaces_idx = 0
         for i, t in enumerate(router.interfaces):
@@ -472,8 +470,10 @@ def draw_router_loc(args, ld, area, r, img_idx):
                 ctx.set_source_rgba(*color_links(args, interfaces_idx))
                 ctx.line_to(other_x, other_y)
                 ctx.stroke()
-            path_thinkness -= 3.0
             interfaces_idx += 1
+            path_thinkness -= 4.0
+            if path_thinkness < 2.0:
+                path_thinkness = 2.0
 
     for i in range(len(r)):
         router = r[i]
@@ -497,7 +497,7 @@ def draw_router_loc(args, ld, area, r, img_idx):
 
 
 def color_transmission_circle_light():
-    return (.0, .0, .0, 1.0)
+    return (0., .0, .0, .2)
 
 def color_transmission_circle_dark():
     return (.10, .10, .10, 1.0)
@@ -765,7 +765,7 @@ def two_hundr_router_static_in_range(args):
         { "name" : "tetra0", "range" : 350, "bandwidth" : 1000, "loss" : 5}
     ]
 
-    area = MobilityArea(600, 500)
+    area = MobilityArea(960, 540)
     r = []
     no_routers = 20
     for i in range(no_routers):
@@ -807,7 +807,7 @@ def three_20_router_dynamic(args):
         r[i].start(0)
 
 
-    SIMU_TIME = 400
+    SIMU_TIME = 100
     for sec in range(SIMU_TIME):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
