@@ -36,7 +36,7 @@ SIMU_AREA_Y = 1080
 
 DEFAULT_PACKET_TTL = 32
 
-random.seed(1)
+#random.seed(1)
 
 # statitics variables follows
 NEIGHBOR_INFO_ACTIVE = 0
@@ -98,6 +98,7 @@ class Router:
             self.interface_addr[interface['name']]['v6'] = self._rand_ip_addr("v6")
 
         self.transmission_within_second = False
+        self.forwarded_packets = list()
 
         self._setup_core()
 
@@ -127,7 +128,6 @@ class Router:
     def get_router_by_interface_addr(self, addr):
         for router in self.r:
             for iface_name, iface_data in router.interface_addr.items():
-                print(router.interface_addr)
                 if iface_data['v4'] == addr:
                     return router
         return None
@@ -215,7 +215,6 @@ class Router:
             if entry['prefix-len'] != "24":
                 raise Exception("prefixlen != 24, this is not allowed for the simulation")
             if entry['prefix'] == dst_ip_normalized:
-                print("found, next hop")
                 return True, entry['next-hop'], entry['interface']
         return False, None, None
 
@@ -233,6 +232,8 @@ class Router:
         if not r:
             print("fck")
             return
+        print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id, r.id))
+        self.forwarded_packets.append([packet['tos'], self, r])
         r.data_packet_rx(packet, interface_name)
 
 
@@ -247,7 +248,6 @@ class Router:
     def _data_packet_reached_dst(self, packet):
         dst_ip = packet['ip-dst']
         dst_ip_prefix = self._ip_addr_to_prefix(dst_ip)
-        print(self._own_networks_v4)
         for addr in self._own_networks_v4:
             if addr[0] == dst_ip_prefix:
                 return True
@@ -282,10 +282,10 @@ class Router:
         self.transmission_within_second = True
         #print(pprint.pformat(msg))
         msg_json = json.dumps(msg)
-        print("message size: {} bytes (uncompressed)".format(len(msg_json)))
+        #print("message size: {} bytes (uncompressed)".format(len(msg_json)))
         if self._do_msg_compress:
             msg = self._msg_compress(msg_json)
-            print("message size: {} bytes (compressed)".format(len(msg)))
+            #print("message size: {} bytes (compressed)".format(len(msg)))
         """ this function is called when core stated
         that a routing message must be transmitted
         """
@@ -482,6 +482,22 @@ def draw_router_loc(args, ld, area, r, img_idx):
             path_thinkness -= 4.0
             if path_thinkness < 2.0:
                 path_thinkness = 2.0
+
+    ctx.set_line_width(3.0)
+    for i in range(len(r)):
+        for data in r[i].forwarded_packets:
+            tos, src, dst = data
+            ctx.set_source_rgba(1., 0, 0, 1)
+            if tos == "highest-bandwidth":
+                ctx.set_source_rgba(1., 1., 0, 1)
+            s_x, s_y = src.coordinates()
+            d_x, d_y = dst.coordinates()
+            ctx.move_to(s_x, s_y)
+            ctx.line_to(d_x, d_y)
+            ctx.stroke()
+    # reset now
+    for i in range(len(r)):
+        r[i].forwarded_packets = list()
 
     for i in range(len(r)):
         router = r[i]
@@ -819,7 +835,6 @@ def three_20_router_dynamic(args):
     SIMU_TIME = 100
     src_id = random.randint(0, no_routers - 1)
     dst_id = r[random.randint(0, no_routers - 1)].pick_random_configured_network()
-    packet_high_througput = gen_data_packet(src_id, dst_id, tos='lowest-loss')
     for sec in range(SIMU_TIME):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
@@ -828,7 +843,8 @@ def three_20_router_dynamic(args):
         draw_images(args, ld, area, r, sec)
         packet_low_loss = gen_data_packet(src_id, dst_id, tos='lowest-loss')
         r[src_id]._data_packet_forward(packet_low_loss)
-        #r[src_id].forward_data_packet(packet_high_througput)
+        packet_high_througput = gen_data_packet(src_id, dst_id, tos='highest-bandwidth')
+        r[src_id]._data_packet_forward(packet_high_througput)
 
 
 scenarios = [
