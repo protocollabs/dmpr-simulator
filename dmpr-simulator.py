@@ -786,10 +786,40 @@ def two_hundr_router_static_in_range(args):
             r[i].step(sec)
         draw_images(args, ld, area, r, sec)
 
+def three_20_router_dynamic(args):
+    ld = os.path.join("run-data", args.topology)
+
+    interfaces = [
+        { "name" : "wifi0", "range" : 200, "bandwidth" : 8000, "loss" : 10},
+        { "name" : "tetra0", "range" : 350, "bandwidth" : 1000, "loss" : 5}
+    ]
+
+    area = MobilityArea(600, 500)
+    r = []
+    no_routers = 20
+    for i in range(no_routers):
+        x = random.randint(200, 400)
+        y = random.randint(200, 300)
+        mm = MobilityModel(area)
+        r.append(Router(str(i), interfaces=interfaces, mm=mm, log_directory=ld))
+        r[i].register_router(r)
+        r[i].connect()
+        r[i].start(0)
+
+
+    SIMU_TIME = 400
+    for sec in range(SIMU_TIME):
+        sep = '=' * 50
+        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
+        for i in range(len(r)):
+            r[i].step(sec)
+        draw_images(args, ld, area, r, sec)
+
 
 scenarios = [
         [ "001-two-router-static-in-range", two_router_static_in_range ],
-        [ "002-20-router-static-in-range", two_hundr_router_static_in_range ]
+        [ "002-20-router-static-in-range", two_hundr_router_static_in_range ],
+        [ "003-20-router-dynamic", three_20_router_dynamic ]
 ]
 
 def die():
@@ -818,8 +848,10 @@ def main():
             setup_img_folder(scenario[0])
             setup_log_folder(scenario[0])
             scenario[1](args)
-            #cmd = "ffmpeg -framerate 10 -pattern_type glob -i 'images-merge/*.png' -c:v libx264 -pix_fmt yuv420p mdvrd.mp4"
-            #print("now execute \"{}\" to generate a video".format(cmd))
+            cmd  = "ffmpeg -framerate 10 -pattern_type glob -i "
+            cmd += "'run-data/{}/images-range-tx-merge/*.png'".format(scenario[0])
+            cmd += "-c:v libx264 -pix_fmt yuv420p dmpr.mp4"
+            print("now execute \"{}\" to generate a video".format(cmd))
             sys.exit(0)
     die()
 
