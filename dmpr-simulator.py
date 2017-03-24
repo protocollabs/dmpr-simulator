@@ -812,6 +812,9 @@ def two_hundr_router_static_in_range(args):
 
 
 def three_20_router_dynamic(args):
+    simulation_time = 100
+    if args.simulation_time:
+        simulation_time = args.simulation_time
     ld = os.path.join("run-data", args.topology)
 
     interfaces = [
@@ -832,12 +835,11 @@ def three_20_router_dynamic(args):
         r[i].start(0)
 
 
-    SIMU_TIME = 100
     src_id = random.randint(0, no_routers - 1)
     dst_id = r[random.randint(0, no_routers - 1)].pick_random_configured_network()
-    for sec in range(SIMU_TIME):
+    for sec in range(simulation_time):
         sep = '=' * 50
-        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, SIMU_TIME))
+        print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, simulation_time))
         for i in range(len(r)):
             r[i].step(sec)
         draw_images(args, ld, area, r, sec)
@@ -861,6 +863,7 @@ def die():
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--topology", help="topology", type=str, default=None)
+    parser.add_argument("-s", "--simulation-time", help="topology", type=int, default=200)
     parser.add_argument("-c", "--color-scheme", help="color scheme: light or dark", type=str, default="dark")
     args = parser.parse_args()
     if not args.topology:
