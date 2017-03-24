@@ -57,8 +57,10 @@ class LoggerClone:
         return os.path.join(directory, val)
 
 
-    def __init__(self, directory, id_):
+    def __init__(self, args, directory, id_):
         file_path = self.calc_file_path(directory, id_)
+        if args.disable_logs:
+            file_path = '/dev/null'
         self._log_fd = open(file_path, 'w')
 
 
@@ -78,9 +80,10 @@ class LoggerClone:
 class Router:
 
 
-    def __init__(self, id_, interfaces=None, mm=None, log_directory=None, msg_compress=True):
+    def __init__(self, args, id_, interfaces=None, mm=None, log_directory=None, msg_compress=True):
+        self.args = args
         self.id = id_
-        self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
+        self.log = LoggerClone(args, os.path.join(log_directory, "logs"), id_)
         self._log_directory = log_directory
         self._do_msg_compress = msg_compress
         assert(mm)
@@ -745,9 +748,9 @@ def two_router_static_in_range(args):
     area = MobilityArea(600, 500)
     r = []
     mm = StaticMobilityModel(area, 200, 250)
-    r.append(Router("1", interfaces=interfaces, mm=mm, log_directory=ld))
+    r.append(Router(args, "1", interfaces=interfaces, mm=mm, log_directory=ld))
     mm = StaticMobilityModel(area, 400, 250)
-    r.append(Router("2", interfaces=interfaces, mm=mm, log_directory=ld))
+    r.append(Router(args, "2", interfaces=interfaces, mm=mm, log_directory=ld))
 
     r[0].register_router(r)
     r[1].register_router(r)
@@ -796,7 +799,7 @@ def two_hundr_router_static_in_range(args):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
         mm = StaticMobilityModel(area, x, y)
-        r.append(Router(str(i), interfaces=interfaces, mm=mm, log_directory=ld))
+        r.append(Router(args, str(i), interfaces=interfaces, mm=mm, log_directory=ld))
         r[i].register_router(r)
         r[i].connect()
         r[i].start(0)
@@ -829,7 +832,7 @@ def three_20_router_dynamic(args):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
         mm = MobilityModel(area)
-        r.append(Router(str(i), interfaces=interfaces, mm=mm, log_directory=ld))
+        r.append(Router(args, str(i), interfaces=interfaces, mm=mm, log_directory=ld))
         r[i].register_router(r)
         r[i].connect()
         r[i].start(0)
@@ -864,6 +867,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--topology", help="topology", type=str, default=None)
     parser.add_argument("-s", "--simulation-time", help="topology", type=int, default=200)
+    parser.add_argument("-d", "--disable-logs", help="disable logging", action='store_true', default=False)
     parser.add_argument("-c", "--color-scheme", help="color scheme: light or dark", type=str, default="dark")
     args = parser.parse_args()
     if not args.topology:
