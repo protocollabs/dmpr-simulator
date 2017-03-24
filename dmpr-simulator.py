@@ -435,17 +435,29 @@ def color_node_inner(args):
     else:
         return color_node_inner_dark()
 
-def color_node_outter_light():
+def color_text_light():
     return (0., 0., 0.)
 
-def color_node_outter_dark():
+def color_text_dark():
     return (0.5, 1, 0.7)
 
-def color_node_outter(args):
+def color_text(args):
     if args.color_scheme == "light":
-        return color_node_outter_light()
+        return color_text_light()
     else:
-        return color_node_outter_dark()
+        return color_text_dark()
+
+def color_text_inverse_light():
+    return (1., 1., 1.)
+
+def color_text_inverse_dark():
+    return (1, 0, 0)
+
+def color_text_inverse(args):
+    if args.color_scheme == "light":
+        return color_text_inverse_light()
+    else:
+        return color_text_inverse_dark()
 
 
 def draw_router_loc(args, ld, area, r, img_idx):
@@ -511,9 +523,14 @@ def draw_router_loc(args, ld, area, r, img_idx):
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
-        # router id
+        # show router id, first we draw a background
+        # with a little offset and the inverse color,
+        # later we draw the actual text
         ctx.set_font_size(10)
-        ctx.set_source_rgb(*color_node_outter(args))
+        ctx.set_source_rgb(*color_text_inverse(args))
+        ctx.move_to(x + 10 + 1, y + 10 + 1)
+        ctx.show_text(str(router.id))
+        ctx.set_source_rgb(*color_text(args))
         ctx.move_to(x + 10, y + 10)
         ctx.show_text(str(router.id))
 
