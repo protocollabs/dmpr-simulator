@@ -36,8 +36,6 @@ SIMU_AREA_Y = 1080
 
 DEFAULT_PACKET_TTL = 32
 
-#random.seed(1)
-
 # statitics variables follows
 NEIGHBOR_INFO_ACTIVE = 0
 
@@ -59,7 +57,7 @@ class LoggerClone:
 
     def __init__(self, args, directory, id_):
         file_path = self.calc_file_path(directory, id_)
-        if args.disable_logs:
+        if not args.enable_logs:
             file_path = '/dev/null'
         self._log_fd = open(file_path, 'w')
 
@@ -615,10 +613,9 @@ def image_merge(args, ld, img_idx):
     new_im = Image.new('RGB', (1920, 1080))
 
     x_offset = 0
-    for im in images:
-        new_im.paste(im, (x_offset,0))
-        x_offset += im.size[0]
-
+    for image in images:
+        new_im.paste(image, (x_offset, 0))
+        x_offset += image.size[0]
     new_im.save(m_path, "PNG")
 
 
@@ -818,16 +815,20 @@ def three_20_router_dynamic(args):
     simulation_time = 100
     if args.simulation_time:
         simulation_time = args.simulation_time
+    no_routers = 200
+    if args.no_router:
+        no_routers = args.no_router
+    print("number of simulated router: {}".format(no_routers))
+
     ld = os.path.join("run-data", args.topology)
 
     interfaces = [
-        { "name" : "wifi0", "range" : 50, "bandwidth" : 8000, "loss" : 10},
-        { "name" : "tetra0", "range" : 100, "bandwidth" : 1000, "loss" : 5}
+        { "name" : "wifi0", "range" : 100, "bandwidth" : 8000, "loss" : 10},
+        { "name" : "tetra0", "range" : 200, "bandwidth" : 1000, "loss" : 5}
     ]
 
-    area = MobilityArea(600, 500)
+    area = MobilityArea(960, 1080)
     r = []
-    no_routers = 200
     for i in range(no_routers):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
@@ -862,19 +863,25 @@ def die():
     print("scenario as argument required")
     sys.exit(1)
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--topology", help="topology", type=str, default=None)
     parser.add_argument("-s", "--simulation-time", help="topology", type=int, default=200)
-    parser.add_argument("-d", "--disable-logs", help="disable logging", action='store_true', default=False)
+    parser.add_argument("-l", "--enable-logs", help="enable logging", action='store_true', default=False)
+    parser.add_argument("-S", "--set-static-seed", help="set static seed", action='store_true', default=False)
     parser.add_argument("-c", "--color-scheme", help="color scheme: light or dark", type=str, default="dark")
+    parser.add_argument("-n", "--no-router", help="number of router, overwrite default", type=int, default=0)
     args = parser.parse_args()
     if not args.topology:
         print("--topology required, please specify a valid file path, exiting now")
         for scenario in scenarios:
             print("  {}".format(scenario[0]))
         sys.exit(1)
+    if args.set_static_seed:
+        print("initialize seed with 1")
+        random.seed(1)
+    print("capture logs: {}".format(args.enable_logs))
+
     return args
 
 
@@ -887,7 +894,7 @@ def main():
             setup_log_folder(scenario[0])
             scenario[1](args)
             cmd  = "ffmpeg -framerate 10 -pattern_type glob -i "
-            cmd += "'run-data/{}/images-range-tx-merge/*.png'".format(scenario[0])
+            cmd += "'run-data/{}/images-range-tx-merge/*.png' ".format(scenario[0])
             cmd += "-c:v libx264 -pix_fmt yuv420p dmpr.mp4"
             print("now execute \"{}\" to generate a video".format(cmd))
             sys.exit(0)
