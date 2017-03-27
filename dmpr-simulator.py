@@ -91,6 +91,8 @@ class Router:
         self.interfaces=interfaces
         self.connections = dict()
         self.interface_addr = dict()
+        self.is_transmitter = False
+        self.is_receiver = False
         self._gen_own_networks()
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
@@ -435,6 +437,30 @@ def color_node_inner(args):
     else:
         return color_node_inner_dark()
 
+def color_node_transmitter_outline_light():
+    return (1.0, 0.0, 1.0)
+
+def color_node_transmitter_outline_dark():
+    return (0.3, 0.5, 0.0)
+
+def color_node_transmitter_outline(args):
+    if args.color_scheme == "light":
+        return color_node_transmitter_outline_light()
+    else:
+        return color_node_transmitter_outline_dark()
+
+def color_node_receiver_outline_light():
+    return (0.9, .2, .1)
+
+def color_node_receiver_outline_dark():
+    return (1.0, 0.0, 1.0)
+
+def color_node_receiver_outline(args):
+    if args.color_scheme == "light":
+        return color_node_receiver_outline_light()
+    else:
+        return color_node_receiver_outline_dark()
+
 def color_text_light():
     return (0., 0., 0.)
 
@@ -496,13 +522,17 @@ def draw_router_loc(args, ld, area, r, img_idx):
             if path_thinkness < 2.0:
                 path_thinkness = 2.0
 
-    ctx.set_line_width(3.0)
+    # draw active links
+    ctx.set_line_width(4.0)
+    dash_len = 4.0
     for i in range(len(r)):
         for data in r[i].forwarded_packets:
             tos, src, dst = data
             ctx.set_source_rgba(1., 0, 0, 1)
+            ctx.set_dash([dash_len, dash_len])
             if tos == "highest-bandwidth":
-                ctx.set_source_rgba(1., 1., 0, 1)
+                ctx.set_source_rgba(0., 0., 1., 1)
+                ctx.set_dash([dash_len, dash_len], dash_len)
             s_x, s_y = src.coordinates()
             d_x, d_y = dst.coordinates()
             ctx.move_to(s_x, s_y)
@@ -512,17 +542,51 @@ def draw_router_loc(args, ld, area, r, img_idx):
     for i in range(len(r)):
         r[i].forwarded_packets = list()
 
+    # draw text and node circle
+    ctx.set_line_width(3.0)
     for i in range(len(r)):
         router = r[i]
         x, y = router.coordinates()
-
         # node middle point
-        ctx.set_line_width(0.0)
-        ctx.set_source_rgb(*color_node_inner(args))
         ctx.move_to(x, y)
         ctx.arc(x, y, 5, 0, 2 * math.pi)
-        ctx.fill()
 
+        if router.is_transmitter:
+            ctx.set_source_rgb(*color_node_transmitter_outline(args))
+            ctx.stroke_preserve()
+
+            ctx.set_source_rgb(*color_text_inverse(args))
+            ctx.move_to(x + 11, y - 9)
+            ctx.set_antialias(False)
+            ctx.show_text("Transmitter")
+            ctx.set_antialias(True)
+
+            ctx.set_source_rgb(*color_node_transmitter_outline(args))
+            ctx.move_to(x + 10, y - 10)
+            ctx.set_antialias(False)
+            ctx.show_text("Transmitter")
+            ctx.set_antialias(True)
+
+        if router.is_receiver:
+            # draw circle outline
+            ctx.set_source_rgb(*color_node_receiver_outline(args))
+            ctx.stroke_preserve()
+
+            ctx.set_source_rgb(*color_text_inverse(args))
+            ctx.move_to(x + 11, y - 9)
+            ctx.set_antialias(False)
+            ctx.show_text("Receiver")
+            ctx.set_antialias(True)
+
+            # show text
+            ctx.set_source_rgb(*color_node_receiver_outline(args))
+            ctx.move_to(x + 10, y - 10)
+            ctx.set_antialias(False)
+            ctx.show_text("Receiver")
+            ctx.set_antialias(True)
+
+        ctx.set_source_rgb(*color_node_inner(args))
+        ctx.fill()
         # show router id, first we draw a background
         # with a little offset and the inverse color,
         # later we draw the actual text
@@ -532,7 +596,9 @@ def draw_router_loc(args, ld, area, r, img_idx):
         ctx.show_text(str(router.id))
         ctx.set_source_rgb(*color_text(args))
         ctx.move_to(x + 10, y + 10)
+        ctx.set_antialias(False)
         ctx.show_text(str(router.id))
+        ctx.set_antialias(True)
 
     full_path = os.path.join(ld, "images-range" , "{0:05}.png".format(img_idx))
     surface.write_to_png(full_path)
@@ -857,16 +923,19 @@ def three_20_router_dynamic(args):
 
 
     src_id = random.randint(0, no_routers - 1)
-    dst_id = r[random.randint(0, no_routers - 1)].pick_random_configured_network()
+    r[src_id].is_transmitter = True
+    dst_id = random.randint(0, no_routers - 1)
+    r[dst_id].is_receiver = True
+    dst_ip = r[dst_id].pick_random_configured_network()
     for sec in range(simulation_time):
         sep = '=' * 50
         print("\n{}\nsimulation time:{:6}/{}\n".format(sep, sec, simulation_time))
         for i in range(len(r)):
             r[i].step(sec)
         draw_images(args, ld, area, r, sec)
-        packet_low_loss = gen_data_packet(src_id, dst_id, tos='lowest-loss')
+        packet_low_loss = gen_data_packet(src_id, dst_ip, tos='lowest-loss')
         r[src_id]._data_packet_forward(packet_low_loss)
-        packet_high_througput = gen_data_packet(src_id, dst_id, tos='highest-bandwidth')
+        packet_high_througput = gen_data_packet(src_id, dst_ip, tos='highest-bandwidth')
         r[src_id]._data_packet_forward(packet_high_througput)
 
 
