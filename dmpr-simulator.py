@@ -19,6 +19,7 @@ import cairo
 import shutil
 import copy
 import lzma
+import enum
 from PIL import Image
 
 import core.dmpr
@@ -74,14 +75,29 @@ class LoggerClone(object):
     critical = msg
 
 
-class Tracer(object):
+class Tracer():
 
-    def __init__(self):
-        pass
+    TICK = "TICK"
 
 
-    def log(self):
-        pass
+
+    def __init__(self, enabled=[]):
+        self.enabled = enabled
+
+    def enable(self, enable):
+        if enable in self.enabled:
+            return
+        self.enabled.append(enable)
+
+    def log(self, tracepoint, msg):
+        if not tracepoint in self.enabled:
+            return
+        # XXX: this will print in a specific trace directory
+        # in a node specific file with a tracepoint specific
+        # file. So really seperated by file. This will allow
+        # really easy data analysis. Just open file datafiles
+        # you are interested in for the particular nodes.
+        print(json.dumps(msg, sort_keys=True))
 
 
 
