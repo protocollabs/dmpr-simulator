@@ -45,7 +45,7 @@ PATH_IMAGES_TX    = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
 
-class LoggerClone:
+class LoggerClone(object):
 
     def calc_file_path(self, directory, id_):
         try:
@@ -74,6 +74,16 @@ class LoggerClone:
     critical = msg
 
 
+class Tracer(object):
+
+    def __init__(self):
+        pass
+
+
+    def log(self):
+        pass
+
+
 
 class Router:
 
@@ -82,6 +92,7 @@ class Router:
         self.args = args
         self.id = id_
         self.log = LoggerClone(args, os.path.join(log_directory, "logs"), id_)
+        self.tracer = Tracer()
         self._log_directory = log_directory
         self._do_msg_compress = msg_compress
         assert(mm)
@@ -107,7 +118,7 @@ class Router:
 
 
     def _setup_core(self):
-        self._core = core.dmpr.DMPR(log=self.log)
+        self._core = core.dmpr.DMPR(log=self.log, tracer=self.tracer)
 
         self._core.register_routing_table_update_cb(self.routing_table_update_cb, priv_data=None)
         self._core.register_msg_tx_cb(self.msg_tx_cb, priv_data=None)
