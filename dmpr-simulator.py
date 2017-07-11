@@ -75,11 +75,9 @@ class LoggerClone(object):
     critical = msg
 
 
-class Tracer():
+class Tracer(object):
 
     TICK = "TICK"
-
-
 
     def __init__(self, enabled=[]):
         self.enabled = enabled
