@@ -14,6 +14,7 @@ import sys
 import uuid
 
 import cairo
+from datetime import datetime
 from PIL import Image
 
 import core.dmpr
@@ -39,29 +40,23 @@ PATH_IMAGES_TX = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
 
-class LoggerClone(object):
-    def calc_file_path(self, directory, id_):
+class LoggerClone(core.dmpr.NoOpLogger):
+    def __init__(self, directory, id_, loglevel=core.dmpr.NoOpLogger.INFO):
+        super(LoggerClone, self).__init__(loglevel)
+
         try:
-            val = "{0:05}.log".format(int(id_))
+            filename = '{0:05}.log'.format(int(id_))
         except ValueError:
-            val = "{}.log".format(str(id_))
-        return os.path.join(directory, val)
+            filename = '{}.log'.format(id_)
 
-    def __init__(self, args, directory, id_):
-        file_path = self.calc_file_path(directory, id_)
-        if not args.enable_logs:
-            file_path = '/dev/null'
-        self._log_fd = open(file_path, 'w')
+        self._log_fd = open(os.path.join(directory, filename), 'w')
 
-    def msg(self, msg, time=None):
+    def log(self, msg, sev, time=lambda: datetime.now().isoformat()):
+        if sev < self.loglevel:
+            pass
         msg = "{} {}\n".format(time, msg)
         self._log_fd.write(msg)
 
-    debug = msg
-    info = msg
-    warning = msg
-    error = msg
-    critical = msg
 
 
 class Tracer(object):
