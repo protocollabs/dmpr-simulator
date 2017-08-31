@@ -58,27 +58,31 @@ class LoggerClone(core.dmpr.NoOpLogger):
         self._log_fd.write(msg)
 
 
+class Tracer(core.dmpr.NoOpTracer):
+    def __init__(self, directory, enabled:dict=None):
+        if enabled is None:
+            self.enabled = {}
+        else:
+            self.enabled = enabled
+        self.directory = directory
 
-class Tracer(object):
-    TICK = "TICK"
+    def enable(self, tracepoint):
+        if tracepoint not in self.enabled:
+            path = os.path.join(self.directory, tracepoint)
+            self.enabled[tracepoint] = open(path, 'w')
 
-    def __init__(self, enabled=[]):
-        self.enabled = enabled
+    def get_files(self, tracepoint: str) -> list:
+        result = []
+        for i in self.enabled:
+            if tracepoint.startswith(i):
+                result.append(self.enabled[i])
+        return result
 
-    def enable(self, enable):
-        if enable in self.enabled:
-            return
-        self.enabled.append(enable)
+    def log(self, tracepoint, time, msg):
+        files = self.get_files(tracepoint)
 
-    def log(self, tracepoint, msg):
-        if not tracepoint in self.enabled:
-            return
-        # XXX: this will print in a specific trace directory
-        # in a node specific file with a tracepoint specific
-        # file. So really seperated by file. This will allow
-        # really easy data analysis. Just open file datafiles
-        # you are interested in for the particular nodes.
-        print(json.dumps(msg, sort_keys=True))
+        for file in files:
+            file.write('{} {}\n'.format(time, msg))
 
 
 class Router:
