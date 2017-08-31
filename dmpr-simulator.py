@@ -90,8 +90,8 @@ class Router:
                  msg_compress=True):
         self.args = args
         self.id = id_
-        self.log = LoggerClone(args, os.path.join(log_directory, "logs"), id_)
-        self.tracer = Tracer()
+        self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
+        self.tracer = Tracer(os.path.join(log_directory, 'trace'))
         self._log_directory = log_directory
         self._do_msg_compress = msg_compress
         assert (mm)
@@ -103,6 +103,7 @@ class Router:
         self.interface_addr = dict()
         self.is_transmitter = False
         self.is_receiver = False
+        self._time = 0
         self._gen_own_networks()
         for interface in self.interfaces:
             self.connections[interface['name']] = dict()
@@ -121,13 +122,15 @@ class Router:
         self._core = core.dmpr.DMPR(log=self.log, tracer=self.tracer)
 
         self._core.register_routing_table_update_cb(
-            self.routing_table_update_cb, priv_data=None)
-        self._core.register_msg_tx_cb(self.msg_tx_cb, priv_data=None)
-        self._core.register_get_time_cb(self.get_time, priv_data=None)
+            self.routing_table_update_cb)
+        self._core.register_msg_tx_cb(self.msg_tx_cb)
+        self._core.register_get_time_cb(self.get_time)
 
         conf = self._gen_configuration()
         self._conf = conf
         self._core.register_configuration(conf)
+        self._core.register_policy(core.dmpr.SimpleBandwidthPolicy())
+        self._core.register_policy(core.dmpr.SimpleLossPolicy())
 
     def _gen_own_networks(self):
         self._own_networks_v4 = list()
@@ -147,9 +150,9 @@ class Router:
     def _generate_configuration(self):
         c = dict()
         c["id"] = self.id
-        c["rtn-msg-interval"] = "30"
-        c["rtn-msg-interval-jitter"] = "7"
-        c["rtn-msg-hold-time"] = "90"
+        c["rtn-msg-interval"] = 30
+        c["rtn-msg-interval-jitter"] = 7
+        c["rtn-msg-hold-time"] = 90
 
         c["mcast-v4-tx-addr"] = "224.0.1.1"
         c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
@@ -162,11 +165,11 @@ class Router:
             entry["addr-v4"] = self.interface_addr[interface['name']]['v4']
             entry["addr-v6"] = self.interface_addr[interface['name']]['v6']
 
-            entry["link-characteristics"] = dict()
+            entry["link-attributes"] = dict()
             characteristics = ("bandwidth", "loss")
             for characteristic in characteristics:
                 if characteristic in interface:
-                    entry["link-characteristics"][characteristic] = interface[
+                    entry["link-attributes"][characteristic] = interface[
                         characteristic]
             c["interfaces"].append(entry)
 
