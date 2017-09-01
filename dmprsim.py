@@ -2,16 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import ipaddress
 import json
 import lzma
 import math
 import os
 import random
 import shutil
-import socket
-import struct
 import sys
-import uuid
 
 from datetime import datetime
 
@@ -39,6 +37,8 @@ PATH_IMAGES_TX = "images-tx"
 PATH_IMAGES_MERGE = "images-merge"
 
 
+class ForwardException(Exception): pass
+
 class LoggerClone(core.dmpr.NoOpLogger):
     def __init__(self, directory, id_, loglevel=core.dmpr.NoOpLogger.INFO):
         super(LoggerClone, self).__init__(loglevel)
@@ -48,6 +48,7 @@ class LoggerClone(core.dmpr.NoOpLogger):
         except ValueError:
             filename = '{}.log'.format(id_)
 
+        os.makedirs(directory, exist_ok=True)
         self._log_fd = open(os.path.join(directory, filename), 'w')
 
     def log(self, msg, sev, time=lambda: datetime.now().isoformat()):
@@ -63,6 +64,7 @@ class Tracer(core.dmpr.NoOpTracer):
             self.enabled = {}
         else:
             self.enabled = enabled
+        os.makedirs(directory, exist_ok=True)
         self.directory = directory
 
     def enable(self, tracepoint):
@@ -77,7 +79,7 @@ class Tracer(core.dmpr.NoOpTracer):
                 result.append(self.enabled[i])
         return result
 
-    def log(self, tracepoint, time, msg):
+    def log(self, tracepoint, msg, time):
         files = self.get_files(tracepoint)
 
         for file in files:
@@ -85,35 +87,38 @@ class Tracer(core.dmpr.NoOpTracer):
 
 
 class Router:
-    def __init__(self, args, id_, interfaces=None, mm=None, log_directory=None,
-                 msg_compress=True):
-        self.args = args
+    def __init__(self, id_, interfaces, mm, log_directory, msg_compress=False):
         self.id = id_
-        self.log = LoggerClone(os.path.join(log_directory, "logs"), id_)
-        self.tracer = Tracer(os.path.join(log_directory, 'trace'))
-        self._log_directory = log_directory
-        self._do_msg_compress = msg_compress
-        assert (mm)
+
+        logger_dir = os.path.join(log_directory, "logs")
+        self.log = LoggerClone(logger_dir, id_)
+
+        tracer_dir = os.path.join(log_directory, "trace")
+        self.tracer = Tracer(tracer_dir)
+
+        self.log_directory = log_directory
+        self.msg_compress = msg_compress
         self.mm = mm
-        assert (interfaces)
-        self._routing_table = {}
         self.interfaces = interfaces
-        self.connections = dict()
-        self.interface_addr = dict()
+
+        self.routing_table = {}
+        self.connections = {}
+        self.interface_addr = {}
         self.is_transmitter = False
         self.is_receiver = False
-        self._time = 0
-        self._gen_own_networks()
-        for interface in self.interfaces:
+        self.time = 0
+        self.routers = []
+        self.transmission_within_second = False
+
+        self.gen_own_networks()
+
+        for interface in interfaces:
             self.connections[interface['name']] = dict()
             self.interface_addr[interface['name']] = dict()
             self.interface_addr[interface['name']]['v4'] = self._rand_ip_addr(
                 "v4")
             self.interface_addr[interface['name']]['v6'] = self._rand_ip_addr(
                 "v6")
-
-        self.transmission_within_second = False
-        self.forwarded_packets = list()
 
         self._setup_core()
 
@@ -131,20 +136,19 @@ class Router:
         self._core.register_policy(core.dmpr.SimpleBandwidthPolicy())
         self._core.register_policy(core.dmpr.SimpleLossPolicy())
 
-    def _gen_own_networks(self):
-        self._own_networks_v4 = list()
+    def gen_own_networks(self):
+        self.networks = list()
         for i in range(2):
-            self._own_networks_v4.append(self._rand_ip_prefix("v4"))
+            self.networks.append(self._rand_ip_prefix("v4"))
 
     def pick_random_configured_network(self):
-        return self._own_networks_v4[0][0]
+        return self.networks[0][0]
 
     def get_router_by_interface_addr(self, addr):
-        for router in self.r:
+        for router in self.routers:
             for iface_name, iface_data in router.interface_addr.items():
                 if iface_data['v4'] == addr:
                     return router
-        return None
 
     def _generate_configuration(self):
         c = dict()
@@ -155,7 +159,6 @@ class Router:
 
         c["mcast-v4-tx-addr"] = "224.0.1.1"
         c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
-        c["proto-transport-enable"] = ["v4"]
 
         c["interfaces"] = list()
         for interface in self.interfaces:
@@ -173,7 +176,7 @@ class Router:
             c["interfaces"].append(entry)
 
         c["networks"] = list()
-        for ip in self._own_networks_v4:
+        for ip in self.networks:
             entry = dict()
             entry["proto"] = "v4"
             entry["prefix"] = ip[0]
@@ -182,95 +185,73 @@ class Router:
         return c
 
     def _dump_config(self, config):
-        dir_ = os.path.join(self._log_directory, "configs")
-        if not os.path.exists(dir_):
-            os.makedirs(dir_)
-        fn = os.path.join(dir_, self.id)
-        with open(fn, 'w') as fd:
-            fd.write("\n" * 2)
-            fd.write(json.dumps(config, sort_keys=True,
+        filename = os.path.join(self.log_directory, 'config')
+        with open(filename, 'w') as file:
+            file.write(json.dumps(config, sort_keys=True,
                                 indent=4, separators=(',', ': ')))
-            fd.write("\n" * 3)
 
     def _gen_configuration(self):
         conf = self._generate_configuration()
         self._dump_config(conf)
         return conf
 
-    def routing_table_update_cb(self, routing_table, priv_data=None):
+    def routing_table_update_cb(self, routing_table):
         """ this function is called when core stated
         that the routing table should be updated
         """
         self.log.info("routing table update")
-        self._routing_table = routing_table
-
-    def _ip_addr_to_prefix(self, ip_addr):
-        ip_tuple = ip_addr.split(".")
-        return "{}.{}.{}.0".format(ip_tuple[0], ip_tuple[1], ip_tuple[2])
+        self.routing_table = routing_table
 
     def _route_lookup(self, packet):
-        tos = packet['tos']  # e.g. "lowest-lost"
-        dst_ip = packet['ip-dst']
-        dst_ip_normalized = self._ip_addr_to_prefix(dst_ip)
-        if not tos in self._routing_table:
+        tos = packet['tos']  # e.g. "lowest-loss"
+        if not tos in self.routing_table:
             print("no policy routing table named: {}".format(tos))
-            print("ICMP, no route to host or take default path?")
-            return False, None, None
-        specific_table = self._routing_table[tos]
+            raise ForwardException("wrong tos")
+
+        dst_prefix = packet['dst-prefix']
+
+        specific_table = self.routing_table[tos]
         for entry in specific_table:
             if entry['proto'] != "v4":
-                print("not ipv4, skipping")
                 continue
             if entry['prefix-len'] != "24":
-                raise Exception(
+                raise ForwardException(
                     "prefixlen != 24, this is not allowed for the simulation")
-            if entry['prefix'] == dst_ip_normalized:
-                return True, entry['next-hop'], entry['interface']
-        return False, None, None
 
-    def _data_packet_forward(self, packet):
-        """ this is a toy version of a forwarding algorithm.
-        A first match algorithm because we make sure that no
-        other network is available in a simulation with the
-        same root"""
-        ok, next_hop_ip, interface_name = self._route_lookup(packet)
-        if not ok:
-            print("route lookup failed, drop packet, no next hop")
-            return
-        r = self.get_router_by_interface_addr(next_hop_ip)
-        if not r:
-            print("fck")
-            return
-        print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id,
-                                                      r.id))
-        self.forwarded_packets.append([packet['tos'], self, r])
-        r.data_packet_rx(packet, interface_name)
+            if entry['prefix'] == dst_prefix:
+                return entry['next-hop'], entry['interface']
 
-    def _data_packet_update_ttl(self, packet):
-        if packet['ttl'] <= 0:
-            print("ttl is 0, drop packet")
-            return False
-        packet['ttl'] -= 1
-        return True
+        raise ForwardException("no route entry")
 
     def _data_packet_reached_dst(self, packet):
-        dst_ip = packet['ip-dst']
-        dst_ip_prefix = self._ip_addr_to_prefix(dst_ip)
-        for addr in self._own_networks_v4:
-            if addr[0] == dst_ip_prefix:
+        dst_prefix = packet['dst-prefix']
+        for addr in self.networks:
+            if addr[0] == dst_prefix:
                 return True
         return False
 
-    def data_packet_rx(self, packet, interface):
-        """ received from a neighbor """
-        ok = self._data_packet_update_ttl(packet)
-        if not ok:
-            return
+    def forward_packet(self, packet):
+        if packet['ttl'] <= 0:
+            self.log.info('drop packet, ttl 0')
+
         if self._data_packet_reached_dst(packet):
             hops = DEFAULT_PACKET_TTL - packet['ttl']
             print("packet reached destination with {} hops".format(hops))
             return
-        self._data_packet_forward(packet)
+
+        packet['ttl'] -= 1
+
+        try:
+            next_hop_ip, interface_name = self._route_lookup(packet)
+        except ForwardException as e:
+            print("route lookup failed, drop packet, no next hop")
+            return
+
+        r = self.get_router_by_interface_addr(next_hop_ip)
+
+        print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id,
+                                                      r.id))
+        r.forward_packet(packet)
 
     def _msg_compress(self, msg):
         msg_bin = msg.encode("ascii", "ignore")
@@ -282,14 +263,13 @@ class Router:
         msg_str = msg_bin.decode('ascii')
         return msg_str
 
-    def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg,
-                  priv_data=None):
+    def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
         self.transmission_within_second = True
         # print(pprint.pformat(msg))
-        msg_json = json.dumps(msg)
+        msg = json.dumps(msg)
         # print("message size: {} bytes (uncompressed)".format(len(msg_json)))
-        if self._do_msg_compress:
-            msg = self._msg_compress(msg_json)
+        if self.msg_compress:
+            msg = self._msg_compress(msg)
             # print("message size: {} bytes (compressed)".format(len(msg)))
         """ this function is called when core stated
         that a routing message must be transmitted
@@ -302,27 +282,27 @@ class Router:
             r_obj.msg_rx(interface_name, msg)
 
     def msg_rx(self, interface_name, msg):
-        if self._do_msg_compress:
+        if self.msg_compress:
             msg = self._msg_decompress(msg)
         msg_dict = json.loads(msg)
         self._core.msg_rx(interface_name, msg_dict)
 
-    def register_router(self, r):
-        self.r = r
+    def register_routers(self, r):
+        self.routers = r
 
-    def get_time(self, priv_data=None):
-        return self._time
+    def get_time(self):
+        return self.time
 
     def step(self, time):
         # new round, reset to no transmission
         self.transmission_within_second = False
-        self._time = time
+        self.time = time
         self.mm.step()
         self.connect()
         self._core.tick()
 
     def start(self, time):
-        self._time = time
+        self.time = time
         self._core.start()
 
     def stop(self):
@@ -342,7 +322,7 @@ class Router:
                     del self.connections[name][other.id]
 
     def connect(self):
-        for neighbor in self.r:
+        for neighbor in self.routers:
             if self.id == neighbor.id:
                 continue
             own_cor = self.coordinates()
@@ -352,42 +332,30 @@ class Router:
             self.connect_links(dist, neighbor)
 
     def _rand_ip_prefix(self, type_):
+        addr = self._rand_ip_addr(type_)
         if type_ == "v4":
-            addr = random.randint(0, 4000000000)
-            a = socket.inet_ntoa(struct.pack("!I", addr))
-            b = a.split(".")
-            c = "{}.{}.{}.0".format(b[0], b[1], b[2])
-            return c, 24
+            network = ipaddress.IPv4Network(addr+'/24', strict=False)
+            return str(network.network_address), 24
         if type_ == "v6":
-            addr = ':'.join(
-                '{:x}'.format(random.randint(0, 2 ** 16 - 1)) for i in range(4))
-            addr += "::"
-            return addr, 64
+            network = ipaddress.IPv6Network(addr+'/64', strict=False)
+            return str(network.network_address), 64
         raise Exception("only IPv4/IPv6 supported")
 
     def _rand_ip_addr(self, type_):
         if type_ == "v4":
-            addr = random.randint(0, 4000000000)
-            a = socket.inet_ntoa(struct.pack("!I", addr))
-            b = a.split(".")
-            c = "{}.{}.{}.{}".format(b[0], b[1], b[2], b[3])
-            return c
+            return str(ipaddress.IPv4Address(random.randint(0, 2**32)))
         if type_ == "v6":
-            return ':'.join(
-                '{:x}'.format(random.randint(0, 2 ** 16 - 1)) for i in range(8))
+            return str(ipaddress.IPv6Address(random.randint(0, 2**128)))
         raise Exception("only IPv4/IPv6 supported")
 
-    def _id_generator(self):
-        return str(uuid.uuid1())
 
-
-def gen_data_packet(src_id, dst_id, tos='lowest-loss'):
-    packet = dict()
-    packet['ip-src'] = src_id
-    packet['ip-dst'] = dst_id
-    packet['ttl'] = DEFAULT_PACKET_TTL
-    packet['tos'] = tos
-    return packet
+def gen_data_packet(src_id, dst_ip, tos='lowest-loss'):
+    return {
+        'src-router': src_id,
+        'dst-prefix': dst_ip,
+        'ttl': DEFAULT_PACKET_TTL,
+        'tos': tos
+    }
 
 
 def setup_log_folder(scenario_name):
@@ -429,7 +397,7 @@ class MobilityModel(object):
         self.area = area
         self.direction_x = random.randint(0, 2)
         self.direction_y = random.randint(0, 2)
-        self.velocity = random.randint(1, 1)
+        self.velocity = 1/random.randint(5, 100)
         self.x = random.randint(0, self.area.x)
         self.y = random.randint(0, self.area.y)
 
@@ -537,9 +505,9 @@ def two_hundr_router_static_in_range(args):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
         mm = StaticMobilityModel(area, x, y)
-        r.append(Router(args, str(i), interfaces=interfaces, mm=mm,
+        r.append(Router(str(i), interfaces=interfaces, mm=mm,
                         log_directory=ld))
-        r[i].register_router(r)
+        r[i].register_routers(r)
         r[i].connect()
         r[i].start(0)
 
@@ -574,9 +542,9 @@ def three_20_router_dynamic(args):
         x = random.randint(200, 400)
         y = random.randint(200, 300)
         mm = MobilityModel(area)
-        r.append(Router(args, str(i), interfaces=interfaces, mm=mm,
+        r.append(Router(str(i), interfaces=interfaces, mm=mm,
                         log_directory=ld))
-        r[i].register_router(r)
+        r[i].register_routers(r)
         r[i].connect()
         r[i].start(0)
 
