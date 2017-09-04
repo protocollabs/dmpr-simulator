@@ -380,10 +380,14 @@ class MobilityArea(object):
 
 
 class StaticMobilityModel(object):
-    def __init__(self, area, x, y):
+    def __init__(self, area, x=None, y=None):
         self.area = area
         self.x = x
         self.y = y
+        if x is None:
+            self.x = random.randint(0, self.area.x)
+        if y is None:
+            self.y = random.randint(0, self.area.y)
         assert (self.x >= 0 and self.x <= self.area.x)
         assert (self.y >= 0 and self.y <= self.area.y)
 
