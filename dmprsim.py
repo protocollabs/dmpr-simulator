@@ -59,11 +59,12 @@ class LoggerClone(core.dmpr.NoOpLogger):
 
 
 class Tracer(core.dmpr.NoOpTracer):
-    def __init__(self, directory, enabled:dict=None):
-        if enabled is None:
-            self.enabled = {}
-        else:
-            self.enabled = enabled
+    def __init__(self, directory, enable: list=None):
+        self.enabled = {}
+        if enable is not None:
+            for tracer in enable:
+                self.enable(tracer)
+
         os.makedirs(directory, exist_ok=True)
         self.directory = directory
 
@@ -83,7 +84,7 @@ class Tracer(core.dmpr.NoOpTracer):
         files = self.get_files(tracepoint)
 
         for file in files:
-            file.write('{} {}\n'.format(time, msg))
+            file.write('{} {}\n'.format(time, json.dumps(msg)))
 
 
 class Router:
