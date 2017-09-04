@@ -110,6 +110,7 @@ class Router:
         self.time = 0
         self.routers = []
         self.transmission_within_second = False
+        self.forwarded_packets = list()
 
         self.gen_own_networks()
 
@@ -220,7 +221,10 @@ class Router:
                     "prefixlen != 24, this is not allowed for the simulation")
 
             if entry['prefix'] == dst_prefix:
-                return entry['next-hop'], entry['interface']
+                router = self.get_router_by_interface_addr(entry['next-hop'])
+                if router.id not in self.connections[entry['interface']]:
+                    raise ForwardException("Router is not connected")
+                return router
 
         raise ForwardException("no route entry")
 
@@ -234,6 +238,7 @@ class Router:
     def forward_packet(self, packet):
         if packet['ttl'] <= 0:
             self.log.info('drop packet, ttl 0')
+            return
 
         if self._data_packet_reached_dst(packet):
             hops = DEFAULT_PACKET_TTL - packet['ttl']
@@ -241,18 +246,19 @@ class Router:
             return
 
         packet['ttl'] -= 1
+        packet['path'].append(self.id)
 
         try:
-            next_hop_ip, interface_name = self._route_lookup(packet)
+            router = self._route_lookup(packet)
         except ForwardException as e:
-            print("route lookup failed, drop packet, no next hop")
+            print("route lookup failed, drop packet, no next hop\n{}".format(e))
+            print(packet['path'])
             return
 
-        r = self.get_router_by_interface_addr(next_hop_ip)
-
         print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id,
-                                                      r.id))
-        r.forward_packet(packet)
+                                                      router.id))
+        self.forwarded_packets.append([packet['tos'], self, router])
+        router.forward_packet(packet)
 
     def _msg_compress(self, msg):
         msg_bin = msg.encode("ascii", "ignore")
@@ -355,7 +361,8 @@ def gen_data_packet(src_id, dst_ip, tos='lowest-loss'):
         'src-router': src_id,
         'dst-prefix': dst_ip,
         'ttl': DEFAULT_PACKET_TTL,
-        'tos': tos
+        'tos': tos,
+        'path': []
     }
 
 
