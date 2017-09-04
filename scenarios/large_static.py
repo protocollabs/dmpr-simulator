@@ -2,7 +2,7 @@ import os
 import random
 
 import draw
-from dmprsim import MobilityArea, MobilityModel, gen_data_packet
+from dmprsim import MobilityArea, StaticMobilityModel, gen_data_packet
 from scenarios.utils import generate_routers
 
 interfaces = [
@@ -18,10 +18,8 @@ def simulate(log_directory):
     draw.setup_img_folder(log_directory)
     area = MobilityArea(600, 500)
 
-    models = (MobilityModel(area) for i in range(NUM_ROUTERS))
+    models = (StaticMobilityModel(area) for _ in range(NUM_ROUTERS))
     routers = generate_routers(interfaces, models, log_directory)
-    for router in routers:
-        router.tracer.enable('tx.msg')
 
     tx_router = random.choice(routers)
     while True:
@@ -53,7 +51,7 @@ def simulate(log_directory):
 
 
 def main():
-    log_directory = os.path.join(os.getcwd(), 'run-data', 'large_moving')
+    log_directory = os.path.join(os.getcwd(), 'run-data', 'large_static')
     os.makedirs(log_directory, exist_ok=True)
     simulate(log_directory)
 
