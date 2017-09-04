@@ -137,8 +137,7 @@ def draw_router_loc(args, ld, area, r, img_idx):
     ctx.set_source_rgba(*color_db(args))
     ctx.fill()
 
-    for i in range(len(r)):
-        router = r[i]
+    for router in r:
         x, y = router.coordinates()
 
         ctx.set_line_width(0.1)
@@ -169,12 +168,11 @@ def draw_router_loc(args, ld, area, r, img_idx):
     # draw active links
     ctx.set_line_width(4.0)
     dash_len = 4.0
-    for i in range(len(r)):
-        for data in r[i].forwarded_packets:
-            tos, src, dst = data
+    for router in r:
+        for tos, src, dst in router.forwarded_packets:
             ctx.set_source_rgba(1., 0, 0, 1)
             ctx.set_dash([dash_len, dash_len])
-            if tos == "highest-bandwidth":
+            if tos == "lowest-loss":
                 ctx.set_source_rgba(0., 0., 1., 1)
                 ctx.set_dash([dash_len, dash_len], dash_len)
             s_x, s_y = src.coordinates()
@@ -183,13 +181,12 @@ def draw_router_loc(args, ld, area, r, img_idx):
             ctx.line_to(d_x, d_y)
             ctx.stroke()
     # reset now
-    for i in range(len(r)):
-        r[i].forwarded_packets = list()
+    for router in r:
+        router.forwarded_packets = list()
 
     # draw text and node circle
     ctx.set_line_width(3.0)
-    for i in range(len(r)):
-        router = r[i]
+    for router in r:
         x, y = router.coordinates()
         # node middle point
         ctx.move_to(x, y)
@@ -321,8 +318,7 @@ def draw_router_transmission(args, ld, area, r, img_idx):
                 path_thickness = 2.0
 
     # draw dots over all
-    for i in range(len(r)):
-        router = r[i]
+    for router in r:
         x, y = router.coordinates()
 
         ctx.set_line_width(0.0)
@@ -355,12 +351,12 @@ def draw_images(args, ld, area, r, img_idx):
     draw_router_loc(args, ld, area, r, img_idx)
     draw_router_transmission(args, ld, area, r, img_idx)
 
-    image_merge(args, ld, img_idx)
+    #image_merge(args, ld, img_idx)
 
 
-def setup_img_folder(scenario_name):
+def setup_img_folder(log_directory):
     for path in ("images-range", "images-tx", "images-range-tx-merge"):
-        f_path = os.path.join("run-data", scenario_name, path)
+        f_path = os.path.join(log_directory, path)
         if os.path.exists(f_path):
             shutil.rmtree(f_path)
-        os.makedirs(f_path)
+        os.makedirs(f_path, exist_ok=True)
