@@ -309,11 +309,10 @@ class Router:
             range = interface['range']
             if dist <= range:
                 self.connections[name][other.id] = other
-            else:
-                if other.id in self.connections[name]:
-                    del self.connections[name][other.id]
 
     def connect(self):
+        self.connections = {interface['name']: {} for interface in
+                            self.interfaces}
         if not self.mm.visible:
             return
         for neighbor in self.routers:
