@@ -314,8 +314,12 @@ class Router:
                     del self.connections[name][other.id]
 
     def connect(self):
+        if not self.mm.visible:
+            return
         for neighbor in self.routers:
             if self.id == neighbor.id:
+                continue
+            if not neighbor.mm.visible:
                 continue
             own_cor = self.coordinates()
             other_cor = neighbor.coordinates()
@@ -365,7 +369,8 @@ class MobilityArea(object):
 
 
 class MobilityModel(object):
-    def __init__(self, area, x=None, y=None, velocity=lambda: 0):
+    def __init__(self, area, x=None, y=None, velocity=lambda: 0,
+                 disappearance_pattern=(0, 0, 0)):
         self.area = area
         self.velocity = (velocity(), velocity())
 
@@ -378,7 +383,14 @@ class MobilityModel(object):
         else:
             self.y = y
 
+        if random.random() < disappearance_pattern[0]:
+            self.disappear = disappearance_pattern[1:]
+        else:
+            self.disappear = False
+        self.visible = True
+
     def step(self):
+        self.toggle_visibility()
         v_x, v_y = self.velocity
         self.x += v_x
         self.y += v_y
@@ -390,6 +402,13 @@ class MobilityModel(object):
             v_y = -v_y
 
         self.velocity = v_x, v_y
+
+    def toggle_visibility(self):
+        if self.disappear:
+            if self.visible:
+                self.visible = random.random() > self.disappear[0]
+            else:
+                self.visible = random.random() < self.disappear[1]
 
     def coordinates(self):
         return self.x, self.y

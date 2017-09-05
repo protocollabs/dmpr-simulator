@@ -138,6 +138,8 @@ def draw_router_loc(args, ld, area, r, img_idx):
     ctx.fill()
 
     for router in r:
+        if not router.mm.visible:
+            continue
         x, y = router.coordinates()
 
         ctx.set_line_width(0.1)
@@ -155,6 +157,8 @@ def draw_router_loc(args, ld, area, r, img_idx):
             # draw lines between links
             ctx.set_line_width(path_thickness)
             for r_id, r_obj in router.connections[interface_name].items():
+                if not r_obj.mm.visible:
+                    continue
                 other_x, other_y = r_obj.coordinates()
                 ctx.move_to(x, y)
                 ctx.set_source_rgba(*color_links(args, interfaces_idx))
@@ -187,6 +191,8 @@ def draw_router_loc(args, ld, area, r, img_idx):
     # draw text and node circle
     ctx.set_line_width(3.0)
     for router in r:
+        if not router.mm.visible:
+            continue
         x, y = router.coordinates()
         # node middle point
         ctx.move_to(x, y)
@@ -283,8 +289,9 @@ def draw_router_transmission(args, ld, area, r, img_idx):
     ctx.fill()
 
     # transmitting circles
-    for i in range(len(r)):
-        router = r[i]
+    for router in r:
+        if not router.mm.visible:
+            continue
         x, y = router.coordinates()
 
         if router.transmission_within_second:
@@ -293,8 +300,9 @@ def draw_router_transmission(args, ld, area, r, img_idx):
             ctx.arc(x, y, 50, 0, 2 * math.pi)
             ctx.fill()
 
-    for i in range(len(r)):
-        router = r[i]
+    for router in r:
+        if not router.mm.visible:
+            continue
         x, y = router.coordinates()
 
         ctx.set_line_width(0.1)
@@ -307,6 +315,8 @@ def draw_router_transmission(args, ld, area, r, img_idx):
             # draw lines between links
             ctx.set_line_width(path_thickness)
             for r_id, r_obj in router.connections[interface_name].items():
+                if not r_obj.mm.visible:
+                    continue
                 other_x, other_y = r_obj.coordinates()
                 ctx.move_to(x, y)
                 ctx.set_source_rgba(*color_tx_links(args))
@@ -319,6 +329,8 @@ def draw_router_transmission(args, ld, area, r, img_idx):
 
     # draw dots over all
     for router in r:
+        if not router.mm.visible:
+            continue
         x, y = router.coordinates()
 
         ctx.set_line_width(0.0)

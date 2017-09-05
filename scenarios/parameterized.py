@@ -15,14 +15,16 @@ DEFAULT_RAND_SEED = 1
 
 def simulate(log_directory, simulation_time, num_routers, area, interfaces,
              random_seed_prep, random_seed_runtime, velocity, visualize,
-             simulate_forwarding):
+             simulate_forwarding, disappearance_pattern):
     random.seed(random_seed_prep)
     if visualize:
         draw.setup_img_folder(log_directory)
     area = MobilityArea(*area)
 
-    models = (MobilityModel(area, velocity=velocity) for _ in
-              range(num_routers))
+    models = (MobilityModel(area,
+                            velocity=velocity,
+                            disappearance_pattern=disappearance_pattern)
+              for _ in range(num_routers))
 
     routers = generate_routers(interfaces, models, log_directory)
 
@@ -69,6 +71,7 @@ def main(simulation_time=SIMULATION_TIME,
          velocity=lambda: 0,
          visualize=True,
          simulate_forwarding=True,
+         disappearance_pattern=(0.2, 0.0025, 0.0025),
          ):
     interfaces = [
         {"name": "wifi0", "range": range1, "bandwidth": 8000, "loss": 10},
@@ -78,7 +81,7 @@ def main(simulation_time=SIMULATION_TIME,
     os.makedirs(log_directory, exist_ok=True)
     simulate(log_directory, simulation_time, num_routers, area, interfaces,
              random_seed_prep, random_seed_runtime, velocity, visualize,
-             simulate_forwarding)
+             simulate_forwarding, disappearance_pattern)
 
 
 if __name__ == '__main__':
