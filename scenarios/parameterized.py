@@ -32,13 +32,13 @@ def simulate(log_directory, simulation_time, num_routers, area, interfaces,
         for tracepoint in tracepoints:
             router.tracer.enable(tracepoint)
 
-    tx_router = random.choice(routers)
-    while True:
-        rx_router = random.choice(routers)
-        if rx_router != tx_router:
-            break
-
     if simulate_forwarding:
+        tx_router = random.choice(routers)
+        while True:
+            rx_router = random.choice(routers)
+            if rx_router != tx_router:
+                break
+
         tx_router.is_transmitter = True
         rx_router.is_receiver = True
         rx_ip = rx_router.pick_random_configured_network()
