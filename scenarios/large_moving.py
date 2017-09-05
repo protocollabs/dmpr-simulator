@@ -34,9 +34,6 @@ def simulate(log_directory):
     rx_ip = rx_router.pick_random_configured_network()
 
     for sec in range(SIMULATION_TIME):
-        if sec % 5 != 0:
-            #continue
-            pass
         print("{}\n\ttime: {}/{}".format("=" * 50, sec, SIMULATION_TIME))
         for router in routers:
             router.step(sec)
