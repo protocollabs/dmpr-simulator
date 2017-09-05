@@ -1,7 +1,7 @@
 import os
 
-from dmprsim import Router, MobilityArea, MobilityModel, gen_data_packet
-from scenarios.utils import generate_routers
+from dmprsim import MobilityArea, MobilityModel, gen_data_packet
+from topologies.utils import generate_routers
 
 interfaces = [
     {"name": "wifi0", "range": 200, "bandwidth": 8000, "loss": 10},
@@ -24,13 +24,14 @@ def simulate(log_directory):
     dst_ip = dst_router.pick_random_configured_network()
 
     for sec in range(SIMULATION_TIME):
-        print("{}\n\ttime: {}/{}".format("="*50, sec, SIMULATION_TIME))
+        print("{}\n\ttime: {}/{}".format("=" * 50, sec, SIMULATION_TIME))
         for router in routers:
             router.step(sec)
 
         # draw.draw_images(args, log_directory, area, routers, sec)
         packet_low_loss = gen_data_packet(src_router, dst_ip, 'lowest-loss')
         src_router.forward_packet(packet_low_loss)
+
 
 def main():
     log_directory = os.path.join(os.getcwd(), 'two_static')

@@ -5,13 +5,39 @@ import draw
 from dmprsim import Router, gen_data_packet
 
 
-class GenericSimulation:
+class GenericTopology:
+    NAME = 'generic'
+
+    def __init__(self, simulation_time, random_seed_runtime,
+                 simulate_forwarding, visualize, log_directory, tracepoints):
+        self.random_seed_runtime = random_seed_runtime
+        self.simulation_time = simulation_time
+        self.simulate_forwarding = simulate_forwarding
+        self.visualize = visualize
+        self.log_directory = log_directory
+        self.tracepoints = tracepoints
+
+        if log_directory is None:
+            self.log_directory = os.path.join(os.getcwd(), 'run-data',
+                                              self.NAME)
+            os.makedirs(self.log_directory, exist_ok=True)
+
+        self.tx_router = None
+        self.rx_ip = None
+        self.area = None
+        self.routers = []
+
     def start(self):
+        for tracepoint in self.tracepoints:
+            for router in self.routers:
+                router.tracer.enable(tracepoint)
+
         random.seed(self.random_seed_runtime)
 
         for sec in range(self.simulation_time):
             print(
-                "{}\n\ttime: {}/{}".format("=" * 50, sec, self.simulation_time))
+                "{}\n\ttime: {}/{}".format("=" * 50, sec,
+                                           self.simulation_time))
             for router in self.routers:
                 router.step(sec)
 
@@ -32,6 +58,9 @@ class GenericSimulation:
 
             draw.draw_images(args, self.log_directory, self.area, self.routers,
                              sec)
+
+    def prepare(self):
+        raise NotImplementedError("A scenario needs a prepare method")
 
 
 def generate_routers(interfaces, mobility_models, log_directory):

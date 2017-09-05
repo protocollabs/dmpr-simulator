@@ -1,17 +1,17 @@
 import random
 
-from scenarios.parameterized import main as simulate
+from topologies.randomized import RandomTopology
 
 # Start simulation
 
 SIMULATION_TIME = 300
 
-routers = simulate(
+simulation = RandomTopology(
     simulation_time=SIMULATION_TIME,
     velocity=lambda: random.random() ** 6,
     tracepoints=('tx.msg',),
-    random_seed_prep=2,
 )
+routers = simulation.prepare()
 
-for router in routers:
+for sec in simulation.start():
     pass
