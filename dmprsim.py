@@ -261,37 +261,21 @@ class Router:
         self.forwarded_packets.append([packet['tos'], self, router])
         router.forward_packet(packet)
 
-    def _msg_compress(self, msg):
-        msg_bin = msg.encode("ascii", "ignore")
-        msg_comp = lzma.compress(msg_bin)
-        return msg_comp
-
-    def _msg_decompress(self, msg):
-        msg_bin = lzma.decompress(msg)
-        msg_str = msg_bin.decode('ascii')
-        return msg_str
-
     def msg_tx_cb(self, interface_name, proto, dst_mcast_addr, msg):
-        self.transmission_within_second = True
-        # print(pprint.pformat(msg))
-        msg = json.dumps(msg)
-        # print("message size: {} bytes (uncompressed)".format(len(msg_json)))
-        if self.msg_compress:
-            msg = self._msg_compress(msg)
-            # print("message size: {} bytes (compressed)".format(len(msg)))
         """ this function is called when core stated
-        that a routing message must be transmitted
-        """
+                that a routing message must be transmitted
+                """
+        self.transmission_within_second = True
+        msg_json = json.dumps(msg)
+
         emsg = "msg transmission [interface:{}, proto:{}, addr:{}]"
         self.log.info(emsg.format(interface_name, proto, dst_mcast_addr),
                       time=self.get_time())
         # send message to all connected routers
-        for r_id, r_obj in self.connections[interface_name].items():
-            r_obj.msg_rx(interface_name, msg)
+        for r_obj in self.connections[interface_name].values():
+            r_obj.msg_rx(interface_name, msg_json)
 
     def msg_rx(self, interface_name, msg):
-        if self.msg_compress:
-            msg = self._msg_decompress(msg)
         msg_dict = json.loads(msg)
         self._core.msg_rx(interface_name, msg_dict)
 
