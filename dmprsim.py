@@ -39,6 +39,7 @@ PATH_IMAGES_MERGE = "images-merge"
 
 class ForwardException(Exception): pass
 
+
 class LoggerClone(core.dmpr.NoOpLogger):
     def __init__(self, directory, id_, loglevel=core.dmpr.NoOpLogger.INFO):
         super(LoggerClone, self).__init__(loglevel)
@@ -59,7 +60,7 @@ class LoggerClone(core.dmpr.NoOpLogger):
 
 
 class Tracer(core.dmpr.NoOpTracer):
-    def __init__(self, directory, enable: list=None):
+    def __init__(self, directory, enable: list = None):
         self.enabled = {}
         if enable is not None:
             for tracer in enable:
@@ -190,7 +191,7 @@ class Router:
         filename = os.path.join(self.log_directory, 'config')
         with open(filename, 'w') as file:
             file.write(json.dumps(config, sort_keys=True,
-                                indent=4, separators=(',', ': ')))
+                                  indent=4, separators=(',', ': ')))
 
     def _gen_configuration(self):
         conf = self._generate_configuration()
@@ -341,18 +342,18 @@ class Router:
     def _rand_ip_prefix(self, type_):
         addr = self._rand_ip_addr(type_)
         if type_ == "v4":
-            network = ipaddress.IPv4Network(addr+'/24', strict=False)
+            network = ipaddress.IPv4Network(addr + '/24', strict=False)
             return str(network.network_address), 24
         if type_ == "v6":
-            network = ipaddress.IPv6Network(addr+'/64', strict=False)
+            network = ipaddress.IPv6Network(addr + '/64', strict=False)
             return str(network.network_address), 64
         raise Exception("only IPv4/IPv6 supported")
 
     def _rand_ip_addr(self, type_):
         if type_ == "v4":
-            return str(ipaddress.IPv4Address(random.randint(0, 2**32)))
+            return str(ipaddress.IPv4Address(random.randint(0, 2 ** 32)))
         if type_ == "v6":
-            return str(ipaddress.IPv6Address(random.randint(0, 2**128)))
+            return str(ipaddress.IPv6Address(random.randint(0, 2 ** 128)))
         raise Exception("only IPv4/IPv6 supported")
 
 
@@ -379,77 +380,32 @@ class MobilityArea(object):
         self.y = height
 
 
-class StaticMobilityModel(object):
-    def __init__(self, area, x=None, y=None):
+class MobilityModel(object):
+    def __init__(self, area, x=None, y=None, velocity=lambda: 0):
         self.area = area
-        self.x = x
-        self.y = y
+        self.velocity = (velocity(), velocity())
+
         if x is None:
             self.x = random.randint(0, self.area.x)
+        else:
+            self.x = x
         if y is None:
             self.y = random.randint(0, self.area.y)
-        assert (self.x >= 0 and self.x <= self.area.x)
-        assert (self.y >= 0 and self.y <= self.area.y)
-
-    def coordinates(self):
-        return self.x, self.y
+        else:
+            self.y = y
 
     def step(self):
-        # static, nothing
-        pass
+        v_x, v_y = self.velocity
+        self.x += v_x
+        self.y += v_y
 
+        if self.x not in range(self.area.x):
+            v_x = -v_x
 
-class MobilityModel(object):
-    LEFT = 1
-    RIGHT = 2
-    UPWARDS = 1
-    DOWNWARDS = 2
+        if self.y not in range(self.area.y):
+            v_y = -v_y
 
-    def __init__(self, area):
-        self.area = area
-        self.direction_x = random.randint(0, 2)
-        self.direction_y = random.randint(0, 2)
-        self.velocity = 1/random.randint(5, 100)
-        self.x = random.randint(0, self.area.x)
-        self.y = random.randint(0, self.area.y)
-
-    def _move_x(self, x):
-        if self.direction_x == MobilityModel.LEFT:
-            x -= self.velocity
-            if x <= 0:
-                self.direction_x = MobilityModel.RIGHT
-                x = 0
-        elif self.direction_x == MobilityModel.RIGHT:
-            x += self.velocity
-            if x >= self.area.x:
-                self.direction_x = MobilityModel.LEFT
-                x = self.area.x
-        else:
-            pass
-        return x
-
-    def _move_y(self, y):
-        if self.direction_y == MobilityModel.DOWNWARDS:
-            y += self.velocity
-            if y >= self.area.y:
-                self.direction_y = MobilityModel.UPWARDS
-                y = self.area.y
-        elif self.direction_y == MobilityModel.UPWARDS:
-            y -= self.velocity
-            if y <= 0:
-                self.direction_y = MobilityModel.DOWNWARDS
-                y = 0
-        else:
-            pass
-        return y
-
-    def move(self, x, y):
-        x = self._move_x(x)
-        y = self._move_y(y)
-        return x, y
-
-    def step(self):
-        self.x, self.y = self.move(self.x, self.y)
+        self.velocity = v_x, v_y
 
     def coordinates(self):
         return self.x, self.y

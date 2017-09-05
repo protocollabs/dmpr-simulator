@@ -1,7 +1,6 @@
 import os
-import random
 
-from dmprsim import Router, MobilityArea, StaticMobilityModel, gen_data_packet
+from dmprsim import Router, MobilityArea, MobilityModel, gen_data_packet
 from scenarios.utils import generate_routers
 
 interfaces = [
@@ -15,8 +14,8 @@ SIMULATION_TIME = 500
 def simulate(log_directory):
     area = MobilityArea(600, 500)
 
-    model1 = StaticMobilityModel(area, 200, 250)
-    model2 = StaticMobilityModel(area, 400, 250)
+    model1 = MobilityModel(area, x=200, y=250)
+    model2 = MobilityModel(area, x=400, y=250)
 
     routers = generate_routers(interfaces, (model1, model2), log_directory)
 
