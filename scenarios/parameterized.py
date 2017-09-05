@@ -14,7 +14,8 @@ DEFAULT_RAND_SEED = 1
 
 
 def simulate(log_directory, simulation_time, num_routers, area, interfaces,
-             random_seed_prep, random_seed_runtime, velocity, visualize):
+             random_seed_prep, random_seed_runtime, velocity, visualize,
+             simulate_forwarding):
     random.seed(random_seed_prep)
     if visualize:
         draw.setup_img_folder(log_directory)
@@ -31,9 +32,10 @@ def simulate(log_directory, simulation_time, num_routers, area, interfaces,
         if rx_router != tx_router:
             break
 
-    tx_router.is_transmitter = True
-    rx_router.is_receiver = True
-    rx_ip = rx_router.pick_random_configured_network()
+    if simulate_forwarding:
+        tx_router.is_transmitter = True
+        rx_router.is_receiver = True
+        rx_ip = rx_router.pick_random_configured_network()
 
     random.seed(random_seed_runtime)
 
@@ -48,11 +50,13 @@ def simulate(log_directory, simulation_time, num_routers, area, interfaces,
         if visualize:
             draw.draw_images(args, log_directory, area, routers, sec)
 
-        packet_low_loss = gen_data_packet(tx_router, rx_ip, tos='lowest-loss')
-        tx_router.forward_packet(packet_low_loss)
-        packet_bandwidth = gen_data_packet(tx_router, rx_ip,
-                                           tos='highest-bandwidth')
-        tx_router.forward_packet(packet_bandwidth)
+        if simulate_forwarding:
+            packet_low_loss = gen_data_packet(tx_router, rx_ip,
+                                              tos='lowest-loss')
+            tx_router.forward_packet(packet_low_loss)
+            packet_bandwidth = gen_data_packet(tx_router, rx_ip,
+                                               tos='highest-bandwidth')
+            tx_router.forward_packet(packet_bandwidth)
 
 
 def main(simulation_time=SIMULATION_TIME,
@@ -63,7 +67,8 @@ def main(simulation_time=SIMULATION_TIME,
          random_seed_prep=DEFAULT_RAND_SEED,
          random_seed_runtime=DEFAULT_RAND_SEED,
          velocity=lambda: 0,
-         visualize=True
+         visualize=True,
+         simulate_forwarding=True,
          ):
     interfaces = [
         {"name": "wifi0", "range": range1, "bandwidth": 8000, "loss": 10},
@@ -72,7 +77,8 @@ def main(simulation_time=SIMULATION_TIME,
     log_directory = os.path.join(os.getcwd(), 'run-data', 'large_static')
     os.makedirs(log_directory, exist_ok=True)
     simulate(log_directory, simulation_time, num_routers, area, interfaces,
-             random_seed_prep, random_seed_runtime, velocity, visualize)
+             random_seed_prep, random_seed_runtime, velocity, visualize,
+             simulate_forwarding)
 
 
 if __name__ == '__main__':
