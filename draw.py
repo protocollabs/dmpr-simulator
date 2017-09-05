@@ -295,9 +295,10 @@ def draw_router_transmission(args, ld, area, r, img_idx):
         x, y = router.coordinates()
 
         if router.transmission_within_second:
+            distance = max(router.interfaces, key=lambda x: x['range'])['range']
             ctx.set_source_rgba(*color_transmission_circle(args))
             ctx.move_to(x, y)
-            ctx.arc(x, y, 50, 0, 2 * math.pi)
+            ctx.arc(x, y, distance, 0, 2 * math.pi)
             ctx.fill()
 
     for router in r:
