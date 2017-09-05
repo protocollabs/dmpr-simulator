@@ -15,7 +15,7 @@ DEFAULT_RAND_SEED = 1
 
 def simulate(log_directory, simulation_time, num_routers, area, interfaces,
              random_seed_prep, random_seed_runtime, velocity, visualize,
-             simulate_forwarding, disappearance_pattern):
+             simulate_forwarding, disappearance_pattern, tracepoints):
     random.seed(random_seed_prep)
     if visualize:
         draw.setup_img_folder(log_directory)
@@ -27,6 +27,10 @@ def simulate(log_directory, simulation_time, num_routers, area, interfaces,
               for _ in range(num_routers))
 
     routers = generate_routers(interfaces, models, log_directory)
+
+    for router in routers:
+        for tracepoint in tracepoints:
+            router.tracer.enable(tracepoint)
 
     tx_router = random.choice(routers)
     while True:
@@ -60,6 +64,8 @@ def simulate(log_directory, simulation_time, num_routers, area, interfaces,
                                                tos='highest-bandwidth')
             tx_router.forward_packet(packet_bandwidth)
 
+    return routers
+
 
 def main(simulation_time=SIMULATION_TIME,
          num_routers=NUM_ROUTERS,
@@ -71,17 +77,22 @@ def main(simulation_time=SIMULATION_TIME,
          velocity=lambda: 0,
          visualize=True,
          simulate_forwarding=True,
-         disappearance_pattern=(0.2, 0.0025, 0.0025),
+         disappearance_pattern=(0, 0, 0),
+         tracepoints=(),
+         log_directory=None
          ):
     interfaces = [
         {"name": "wifi0", "range": range1, "bandwidth": 8000, "loss": 10},
         {"name": "tetra0", "range": range2, "bandwidth": 1000, "loss": 5}
     ]
-    log_directory = os.path.join(os.getcwd(), 'run-data', 'large_static')
+    if log_directory is None:
+        log_directory = os.path.join(os.getcwd(), 'run-data', 'large_static')
+
     os.makedirs(log_directory, exist_ok=True)
-    simulate(log_directory, simulation_time, num_routers, area, interfaces,
-             random_seed_prep, random_seed_runtime, velocity, visualize,
-             simulate_forwarding, disappearance_pattern)
+    return simulate(log_directory, simulation_time, num_routers, area,
+                    interfaces, random_seed_prep, random_seed_runtime, velocity,
+                    visualize, simulate_forwarding, disappearance_pattern,
+                    tracepoints)
 
 
 if __name__ == '__main__':
