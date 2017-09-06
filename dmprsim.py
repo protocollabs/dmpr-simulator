@@ -14,6 +14,7 @@ import sys
 from datetime import datetime
 
 import core.dmpr
+import core.dmpr.path
 import draw
 
 NO_ROUTER = 100
@@ -59,6 +60,13 @@ class LoggerClone(core.dmpr.NoOpLogger):
         self._log_fd.write(msg)
 
 
+class JSONPathEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, core.dmpr.path.Path):
+            return '>'.join(o.nodes)
+        return json.JSONEncoder.default(self, o)
+
+
 class Tracer(core.dmpr.NoOpTracer):
     def __init__(self, directory, enable: list = None):
         self.enabled = {}
@@ -85,7 +93,8 @@ class Tracer(core.dmpr.NoOpTracer):
         files = self.get_files(tracepoint)
 
         for file in files:
-            file.write('{} {}\n'.format(time, json.dumps(msg)))
+            file.write('{} {}\n'.format(time, json.dumps(msg, sort_keys=True,
+                                                         cls=JSONPathEncoder)))
 
 
 class Router:
