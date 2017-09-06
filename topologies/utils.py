@@ -1,5 +1,6 @@
 import os.path
 import random
+import subprocess
 
 import draw
 from dmprsim import Router, gen_data_packet
@@ -73,3 +74,15 @@ def generate_routers(interfaces, mobility_models, log_directory):
         router.connect()
         router.start(0)
     return routers
+
+
+def ffmpeg(directory: str):
+    source = os.path.join(directory, 'images-range-tx-merge', '*.png')
+    dest = os.path.join(directory, 'dmpr.mp4')
+    subprocess.call(('ffmpeg',
+                     '-framerate', '10',
+                     '-pattern_type', 'glob',
+                     '-i', source,
+                     '-c:v', 'libx264',
+                     '-pix_fmt', 'yuv420p',
+                     dest))
