@@ -67,7 +67,7 @@ class GenericTopology:
 def generate_routers(interfaces, mobility_models, log_directory):
     routers = []
     for i, model in enumerate(mobility_models):
-        ld = os.path.join(log_directory, str(i))
+        ld = os.path.join(log_directory, 'routers', str(i))
         routers.append(Router(str(i), interfaces, model, ld))
     for router in routers:
         router.register_routers(routers)
