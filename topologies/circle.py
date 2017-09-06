@@ -21,6 +21,7 @@ class CircleTopology(GenericTopology):
                  simulate_forwarding=True,
                  tracepoints=(),
                  log_directory=None,
+                 name=NAME,
                  ):
         super(CircleTopology, self).__init__(
             simulation_time,
@@ -28,7 +29,8 @@ class CircleTopology(GenericTopology):
             simulate_forwarding,
             visualize,
             log_directory,
-            tracepoints
+            tracepoints,
+            name,
         )
         self.num_routers = num_routers
         self.interfaces = [

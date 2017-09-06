@@ -364,7 +364,7 @@ def draw_images(args, ld, area, r, img_idx):
     draw_router_loc(args, ld, area, r, img_idx)
     draw_router_transmission(args, ld, area, r, img_idx)
 
-    #image_merge(args, ld, img_idx)
+    image_merge(args, ld, img_idx)
 
 
 def setup_img_folder(log_directory):

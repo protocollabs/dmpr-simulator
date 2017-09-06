@@ -6,20 +6,20 @@ from dmprsim import Router, gen_data_packet
 
 
 class GenericTopology:
-    NAME = 'generic'
-
-    def __init__(self, simulation_time, random_seed_runtime,
-                 simulate_forwarding, visualize, log_directory, tracepoints):
+    def __init__(self, simulation_time: int, random_seed_runtime: int,
+                 simulate_forwarding: bool, visualize: bool, log_directory: str,
+                 tracepoints: tuple, name: str):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
         self.simulate_forwarding = simulate_forwarding
         self.visualize = visualize
         self.log_directory = log_directory
         self.tracepoints = tracepoints
+        self.name = name
 
         if log_directory is None:
             self.log_directory = os.path.join(os.getcwd(), 'run-data',
-                                              self.NAME)
+                                              self.name)
             os.makedirs(self.log_directory, exist_ok=True)
 
         self.tx_router = None

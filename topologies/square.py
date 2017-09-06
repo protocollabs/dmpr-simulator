@@ -23,7 +23,8 @@ class SquareTopology(GenericTopology):
                  tracepoints=(),
                  log_directory=None,
                  diagonal=False,
-                 range_factor=1
+                 range_factor=1,
+                 name=NAME,
                  ):
         super(SquareTopology, self).__init__(
             simulation_time,
@@ -31,7 +32,8 @@ class SquareTopology(GenericTopology):
             simulate_forwarding,
             visualize,
             log_directory,
-            tracepoints
+            tracepoints,
+            name,
         )
         self.size = size
         self.interfaces = [

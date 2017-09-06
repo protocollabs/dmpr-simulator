@@ -29,6 +29,7 @@ class RandomTopology(GenericTopology):
                  disappearance_pattern=(0, 0, 0),
                  tracepoints=(),
                  log_directory=None,
+                 name=NAME,
                  ):
         super(RandomTopology, self).__init__(
             simulation_time,
@@ -36,7 +37,8 @@ class RandomTopology(GenericTopology):
             simulate_forwarding,
             visualize,
             log_directory,
-            tracepoints
+            tracepoints,
+            name,
         )
         self.num_routers = num_routers
         self.area = MobilityArea(*area)
