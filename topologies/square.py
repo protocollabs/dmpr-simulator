@@ -12,6 +12,7 @@ class SquareTopology(GenericTopology):
     SIMULATION_TIME = 300
     SIZE = 3
     DEFAULT_RAND_SEED = 1
+    DEFAULT_PARTIAL_INTERVAL = 0
 
     def __init__(self,
                  simulation_time=SIMULATION_TIME,
@@ -25,6 +26,7 @@ class SquareTopology(GenericTopology):
                  diagonal=False,
                  range_factor=1,
                  name=NAME,
+                 partial_interval=DEFAULT_PARTIAL_INTERVAL
                  ):
         super(SquareTopology, self).__init__(
             simulation_time,
@@ -34,6 +36,7 @@ class SquareTopology(GenericTopology):
             log_directory,
             tracepoints,
             name,
+            partial_interval
         )
         self.size = size
         self.interfaces = [

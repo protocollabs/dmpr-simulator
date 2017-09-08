@@ -9,7 +9,7 @@ from dmprsim import Router, gen_data_packet
 class GenericTopology:
     def __init__(self, simulation_time: int, random_seed_runtime: int,
                  simulate_forwarding: bool, visualize: bool, log_directory: str,
-                 tracepoints: tuple, name: str):
+                 tracepoints: tuple, name: str, partial_interval: int = 0):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
         self.simulate_forwarding = simulate_forwarding
@@ -17,6 +17,7 @@ class GenericTopology:
         self.log_directory = log_directory
         self.tracepoints = tracepoints
         self.name = name
+        self.partial_interval = partial_interval
 
         if log_directory is None:
             self.log_directory = os.path.join(os.getcwd(), 'run-data',
