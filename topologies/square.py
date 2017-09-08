@@ -93,7 +93,7 @@ class SquareTopology(GenericTopology):
 
 
 if __name__ == '__main__':
-    simulation = SquareTopology(range_factor=100, size=5)
+    simulation = SquareTopology()
     simulation.prepare()
     for _ in simulation.start():
         pass
