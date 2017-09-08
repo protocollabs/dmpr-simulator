@@ -85,4 +85,5 @@ def ffmpeg(directory: str):
                      '-i', source,
                      '-c:v', 'libx264',
                      '-pix_fmt', 'yuv420p',
+                     '-y',
                      dest))
