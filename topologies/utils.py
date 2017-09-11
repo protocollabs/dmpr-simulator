@@ -9,7 +9,7 @@ from dmprsim import Router, gen_data_packet
 class GenericTopology:
     def __init__(self, simulation_time: int, random_seed_runtime: int,
                  simulate_forwarding: bool, visualize: bool, log_directory: str,
-                 tracepoints: tuple, name: str):
+                 tracepoints: tuple, name: str, config: dict):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
         self.simulate_forwarding = simulate_forwarding
@@ -17,6 +17,7 @@ class GenericTopology:
         self.log_directory = log_directory
         self.tracepoints = tracepoints
         self.name = name
+        self.config_override = config
 
         if log_directory is None:
             self.log_directory = os.path.join(os.getcwd(), 'run-data',
@@ -60,15 +61,23 @@ class GenericTopology:
             draw.draw_images(args, self.log_directory, self.area, self.routers,
                              sec)
 
+    def _generate_routers(self, models):
+        return generate_routers(interfaces=self.interfaces,
+                                log_directory=self.log_directory,
+                                config_override=self.config_override,
+                                mobility_models=models)
+
     def prepare(self):
         raise NotImplementedError("A scenario needs a prepare method")
 
 
-def generate_routers(interfaces, mobility_models, log_directory):
+def generate_routers(interfaces: list, mobility_models: list,
+                     log_directory: str, config_override: dict):
     routers = []
     for i, model in enumerate(mobility_models):
         ld = os.path.join(log_directory, 'routers', str(i))
-        routers.append(Router(str(i), interfaces, model, ld))
+        routers.append(Router(str(i), interfaces, model, ld,
+                              config_override))
     for router in routers:
         router.register_routers(routers)
         router.connect()
@@ -85,4 +94,5 @@ def ffmpeg(directory: str):
                      '-i', source,
                      '-c:v', 'libx264',
                      '-pix_fmt', 'yuv420p',
+                     '-y',
                      dest))
