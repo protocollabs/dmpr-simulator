@@ -1,3 +1,7 @@
+"""
+Just a large random network which moves slowly
+"""
+
 import os
 import random
 

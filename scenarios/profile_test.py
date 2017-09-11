@@ -1,3 +1,7 @@
+"""
+A quick scenario for code profiling
+"""
+
 from topologies.randomized import RandomTopology
 
 sim = RandomTopology(

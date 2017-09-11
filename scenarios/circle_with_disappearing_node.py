@@ -1,3 +1,7 @@
+"""
+Removes a node after 300 seconds, adds it after 900 seconds
+One run for full mode, one for partial
+"""
 import os
 
 from topologies.circle import CircleTopology

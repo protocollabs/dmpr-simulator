@@ -1,3 +1,7 @@
+"""
+Generates a histogram of different message types,
+requires tx.msg tracepoint, designed for scenarios/compare_partial_full.py
+"""
 import argparse
 import json
 import os
@@ -6,11 +10,6 @@ from zlib import compress
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-
-__doc__ = """
-Generates a histogram of different message types,
-requires tx.msg tracepoint, designed for scenarios/compare_partial_full.py
-"""
 
 matplotlib.style.use('ggplot')
 

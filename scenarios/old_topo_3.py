@@ -1,3 +1,7 @@
+"""
+The old topology 3 rebuilt, mainly for speed comparison before/after rewrite
+"""
+
 from topologies.randomized import RandomTopology
 
 sim = RandomTopology(

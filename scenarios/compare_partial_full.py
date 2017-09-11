@@ -1,3 +1,9 @@
+"""
+Run once for each combination of size, range, partial/full mode,
+can be used to compare message sizes and speed for different sized and
+meshed networks
+"""
+
 import os
 
 from topologies.square import SquareTopology

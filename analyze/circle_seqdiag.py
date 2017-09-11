@@ -1,13 +1,12 @@
+"""
+Draw a sequence diagram of all transmitted messages,
+requires rx.msg.valid tracepoint
+"""
 import argparse
 import json
 import os
 
 from seqdiag import drawer, builder, parser as seq_parser
-
-__doc__ = """
-Draw a sequence diagram of all transmitted messages,
-requires rx.msg.valid tracepoint
-"""
 
 skel = """
    seqdiag {{
