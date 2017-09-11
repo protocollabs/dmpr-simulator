@@ -98,7 +98,8 @@ class Tracer(core.dmpr.NoOpTracer):
 
 
 class Router:
-    def __init__(self, id_, interfaces, mm, log_directory, msg_compress=False):
+    def __init__(self, id_, interfaces: list, mm,
+                 log_directory: str, override_config={}, policies=None):
         self.id = id_
 
         logger_dir = os.path.join(log_directory, "logs")
@@ -108,9 +109,9 @@ class Router:
         self.tracer = Tracer(tracer_dir)
 
         self.log_directory = log_directory
-        self.msg_compress = msg_compress
         self.mm = mm
         self.interfaces = interfaces
+        self.override_config = override_config
 
         self.routing_table = {}
         self.connections = {}
@@ -123,6 +124,11 @@ class Router:
         self.forwarded_packets = list()
 
         self.gen_own_networks()
+
+        self.policies = policies
+        if policies is None:
+            self.policies = (core.dmpr.SimpleBandwidthPolicy(),
+                             core.dmpr.SimpleLossPolicy())
 
         for interface in interfaces:
             self.connections[interface['name']] = dict()
@@ -145,8 +151,8 @@ class Router:
         conf = self._gen_configuration()
         self._conf = conf
         self._core.register_configuration(conf)
-        self._core.register_policy(core.dmpr.SimpleBandwidthPolicy())
-        self._core.register_policy(core.dmpr.SimpleLossPolicy())
+        for policy in self.policies:
+            self._core.register_policy(policy)
 
     def gen_own_networks(self):
         self.networks = list()
@@ -194,6 +200,8 @@ class Router:
             entry["prefix"] = ip[0]
             entry["prefix-len"] = ip[1]
             c["networks"].append(entry)
+
+        c.update(self.override_config)
         return c
 
     def _dump_config(self, config):

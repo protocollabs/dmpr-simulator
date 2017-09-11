@@ -1,8 +1,8 @@
 import random
 
 import draw
-from dmprsim import MobilityArea, MobilityModel, gen_data_packet
-from topologies.utils import generate_routers, GenericTopology
+from dmprsim import MobilityArea, MobilityModel
+from topologies.utils import GenericTopology
 
 
 class RandomTopology(GenericTopology):
@@ -30,6 +30,7 @@ class RandomTopology(GenericTopology):
                  tracepoints=(),
                  log_directory=None,
                  name=NAME,
+                 config={},
                  ):
         super(RandomTopology, self).__init__(
             simulation_time,
@@ -39,6 +40,7 @@ class RandomTopology(GenericTopology):
             log_directory,
             tracepoints,
             name,
+            config,
         )
         self.num_routers = num_routers
         self.area = MobilityArea(*area)
@@ -58,8 +60,7 @@ class RandomTopology(GenericTopology):
                                 disappearance_pattern=self.disappearance_pattern)
                   for _ in range(self.num_routers))
 
-        self.routers = generate_routers(self.interfaces, models,
-                                        self.log_directory)
+        self.routers = self._generate_routers(models)
 
         if self.simulate_forwarding:
             self.tx_router = random.choice(self.routers)

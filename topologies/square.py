@@ -4,7 +4,7 @@ import random
 
 import draw
 from dmprsim import MobilityArea, MobilityModel
-from topologies.utils import generate_routers, GenericTopology
+from topologies.utils import GenericTopology
 
 
 class SquareTopology(GenericTopology):
@@ -12,7 +12,6 @@ class SquareTopology(GenericTopology):
     SIMULATION_TIME = 300
     SIZE = 3
     DEFAULT_RAND_SEED = 1
-    DEFAULT_PARTIAL_INTERVAL = 0
 
     def __init__(self,
                  simulation_time=SIMULATION_TIME,
@@ -26,7 +25,7 @@ class SquareTopology(GenericTopology):
                  diagonal=False,
                  range_factor=1,
                  name=NAME,
-                 partial_interval=DEFAULT_PARTIAL_INTERVAL
+                 config={},
                  ):
         super(SquareTopology, self).__init__(
             simulation_time,
@@ -36,7 +35,7 @@ class SquareTopology(GenericTopology):
             log_directory,
             tracepoints,
             name,
-            partial_interval
+            config,
         )
         self.size = size
         self.interfaces = [
@@ -78,8 +77,7 @@ class SquareTopology(GenericTopology):
                                         x=x * distance + padding,
                                         y=y * distance + padding))
 
-        self.routers = generate_routers(self.interfaces, models,
-                                        self.log_directory)
+        self.routers = self._generate_routers(models)
 
         if self.simulate_forwarding:
             self.tx_router = random.choice(self.routers)

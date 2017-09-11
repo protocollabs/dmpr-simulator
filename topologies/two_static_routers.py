@@ -17,7 +17,7 @@ def simulate(log_directory):
     model1 = MobilityModel(area, x=200, y=250)
     model2 = MobilityModel(area, x=400, y=250)
 
-    routers = generate_routers(interfaces, (model1, model2), log_directory)
+    routers = generate_routers(interfaces, [model1, model2], log_directory, {})
 
     src_router = routers[0]
     dst_router = routers[1]

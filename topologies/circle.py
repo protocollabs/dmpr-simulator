@@ -3,7 +3,7 @@ import random
 
 import draw
 from dmprsim import MobilityArea, MobilityModel
-from topologies.utils import generate_routers, GenericTopology
+from topologies.utils import GenericTopology
 
 
 class CircleTopology(GenericTopology):
@@ -22,6 +22,7 @@ class CircleTopology(GenericTopology):
                  tracepoints=(),
                  log_directory=None,
                  name=NAME,
+                 config={},
                  ):
         super(CircleTopology, self).__init__(
             simulation_time,
@@ -31,6 +32,7 @@ class CircleTopology(GenericTopology):
             log_directory,
             tracepoints,
             name,
+            config,
         )
         self.num_routers = num_routers
         self.interfaces = [
@@ -72,8 +74,7 @@ class CircleTopology(GenericTopology):
             y = radius * math.sin(alpha) + center
             models.append(MobilityModel(self.area, x=x, y=y))
 
-        self.routers = generate_routers(self.interfaces, models,
-                                        self.log_directory)
+        self.routers = self._generate_routers(models)
 
         if self.simulate_forwarding:
             self.tx_router = random.choice(self.routers)
