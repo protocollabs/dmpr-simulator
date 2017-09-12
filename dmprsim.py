@@ -110,7 +110,7 @@ class Router:
 
         self.log_directory = log_directory
         self.mm = mm
-        self.interfaces = interfaces
+        self.interfaces = {iface['name']: iface for iface in interfaces}
         self.override_config = override_config
 
         self.routing_table = {}
@@ -179,7 +179,7 @@ class Router:
         c["mcast-v6-tx-addr"] = "ff05:0:0:0:0:0:0:2"
 
         c["interfaces"] = list()
-        for interface in self.interfaces:
+        for interface in self.interfaces.values():
             entry = dict()
             entry["name"] = interface["name"]
             entry["addr-v4"] = self.interface_addr[interface['name']]['v4']
@@ -293,6 +293,8 @@ class Router:
             r_obj.msg_rx(interface_name, msg_json)
 
     def msg_rx(self, interface_name, msg):
+        if self.interfaces[interface_name].get('rx-loss', 0) > random.random():
+            return
         msg_dict = json.loads(msg)
         self._core.msg_rx(interface_name, msg_dict)
 
@@ -321,15 +323,14 @@ class Router:
         return self.mm.coordinates()
 
     def connect_links(self, dist, other):
-        for interface in self.interfaces:
+        for interface in self.interfaces.values():
             name = interface['name']
             range = interface['range']
             if dist <= range:
                 self.connections[name][other.id] = other
 
     def connect(self):
-        self.connections = {interface['name']: {} for interface in
-                            self.interfaces}
+        self.connections = {interface: {} for interface in self.interfaces}
         if not self.mm.visible:
             return
         for neighbor in self.routers:
