@@ -1,44 +1,21 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import argparse
 import ipaddress
 import json
-import lzma
 import math
 import os
 import random
 import shutil
-import sys
-
 from datetime import datetime
 
 import core.dmpr
 import core.dmpr.path
-import draw
-
-NO_ROUTER = 100
-
-RTN_MSG_INTERVAL = 30
-RTN_MSG_INTERVAL_JITTER = int(RTN_MSG_INTERVAL / 4)
-RTN_MSG_HOLD_TIME = RTN_MSG_INTERVAL * 3 + 1
-
-# two stiched images result in 1080p resoltion
-SIMU_AREA_X = 960
-SIMU_AREA_Y = 1080
 
 DEFAULT_PACKET_TTL = 32
 
-# statitics variables follows
-NEIGHBOR_INFO_ACTIVE = 0
 
-PATH_LOGS = "logs"
-PATH_IMAGES_RANGE = "images-range"
-PATH_IMAGES_TX = "images-tx"
-PATH_IMAGES_MERGE = "images-merge"
-
-
-class ForwardException(Exception): pass
+class ForwardException(Exception):
+    pass
 
 
 class LoggerClone(core.dmpr.NoOpLogger):
