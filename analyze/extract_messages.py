@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 
 
@@ -9,14 +8,15 @@ def all_tracepoints(input_dirs, tracepoint):
             yield os.path.join(dir, 'routers', router, 'trace', tracepoint)
 
 
-def extract_message(tracefile):
+def extract_messages(tracefile):
     messages = []
-    with open(tracefile) as f:
-        for line in f:
-            msg = ' '.join(line.split()[1:])
-            msg = json.dumps(json.loads(msg), sort_keys=True,
-                             separators=(',', ':'))
-            messages.append(msg)
+    try:
+        with open(tracefile) as f:
+            for line in f:
+                msg = ' '.join(line.split()[1:])
+                messages.append(msg)
+    except FileNotFoundError:
+        pass
     return messages
 
 
@@ -35,7 +35,7 @@ def main():
 
     with open(args.output, 'w') as out:
         for tracefile in all_tracepoints(args.input, args.tracepoint):
-            messages = extract_message(tracefile)
+            messages = extract_messages(tracefile)
             out.write('\n'.join(messages) + '\n')
 
 
