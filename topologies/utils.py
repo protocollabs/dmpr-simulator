@@ -21,6 +21,7 @@ class GenericTopology:
         self.tracepoints = tracepoints
         self.name = name
         self.config_override = config
+        self.print = True
 
         if log_directory is None:
             self.log_directory = os.path.join(os.getcwd(), 'run-data',
@@ -40,9 +41,9 @@ class GenericTopology:
         random.seed(self.random_seed_runtime)
 
         for sec in range(self.simulation_time):
-            print(
-                "{}\n\ttime: {}/{}".format("=" * 50, sec,
-                                           self.simulation_time))
+            if self.print:
+                print("{}\n\ttime: {}/{}".format("=" * 50, sec,
+                                                 self.simulation_time))
             for router in self.routers:
                 router.step(sec)
 

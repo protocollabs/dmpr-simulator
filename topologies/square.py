@@ -75,7 +75,12 @@ class SquareTopology(GenericTopology):
         self.interfaces[0]['range'] = range_ * self.range_factor + 1
 
         models = []
-        for x, y in itertools.product(range(self.size), range(self.size)):
+        if self.size == 1:
+            size_x, size_y = 2, 1
+        else:
+            size_x, size_y = self.size, self.size
+
+        for x, y in itertools.product(range(size_x), range(size_y)):
             models.append(MobilityModel(self.area,
                                         x=x * distance + padding,
                                         y=y * distance + padding))
