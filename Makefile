@@ -20,6 +20,10 @@ all_len_lzma = $(all_dirs:/=/len-lzma)
 # helpers
 process_msg = $(PYPY) -m analyze.process_messages
 acc_by_density_size = $(SH) analyze/message_size_plots/acc_by_density_size.sh $(msg_dir) $(result_dir)
+plot_size_density = $(PY) -m analyze.message_size_plots.density_size_plots $(result_dir)
+
+# default catcher
+default:
 
 # Plot all available plots
 msg_size_plots: plot_by_density_size_uncompressed plot_by_density_size_zlib
@@ -31,16 +35,23 @@ clean_plots:
 # generate all uncompressed density-size plots
 plot_by_density_size_uncompressed: $(all_len)
 	$(acc_by_density_size) $(INTERVAL_PARTIAL)
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-partial
+	$(plot_size_density) -o $(result_dir)/density-partial
 	$(acc_by_density_size) $(INTERVAL_FULL)
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-full
+	$(plot_size_density) -o $(result_dir)/density-full
 
 # plot all zlib density-size plots
 plot_by_density_size_zlib: $(all_len_zlib)
 	$(acc_by_density_size) $(INTERVAL_PARTIAL) -zlib
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-partial-zlib
+	$(plot_size_density) -o $(result_dir)/density-partial-zlib
 	$(acc_by_density_size) $(INTERVAL_FULL) -zlib
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-full-zlib
+	$(plot_size_density) -o $(result_dir)/density-full-zlib
+
+# plot all zlib density-size plots
+plot_by_density_size_lzma: $(all_len_lzma)
+	$(acc_by_density_size) $(INTERVAL_PARTIAL) -lzma
+	$(plot_size_density) -o $(result_dir)/density-partial-lzma
+	$(acc_by_density_size) $(INTERVAL_FULL) -lzma
+	$(plot_size_density) -o $(result_dir)/density-full-lzma
 
 # Compute the message lengths for each configuration
 $(all_len):
@@ -59,4 +70,5 @@ START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS:
 	$(PY) scenarios.size_combinations
 
 .PHONY: mrproper msg_size_plots plot_by_density_size_uncompressed clean_plots \
-		plot_by_density_size_zlib START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS
+		plot_by_density_size_zlib default \
+		START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS
