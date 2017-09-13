@@ -70,8 +70,9 @@ class Tracer(core.dmpr.NoOpTracer):
         files = self.get_files(tracepoint)
 
         for file in files:
-            file.write('{} {}\n'.format(time, json.dumps(msg, sort_keys=True,
-                                                         cls=JSONPathEncoder)))
+            json_msg = json.dumps(msg, sort_keys=True, cls=JSONPathEncoder,
+                                  separators=(',', ':'))
+            file.write('{} {}\n'.format(time, json_msg))
 
 
 class Router:

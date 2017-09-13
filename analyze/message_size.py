@@ -18,11 +18,23 @@ class MessageSizeAccumulator(object):
     def __init__(self):
         self.json = []
         self.json_compressed = []
+        self.reduced_compressed = []
 
     def add_msg(self, msg):
         msg = json.dumps(json.loads(msg), sort_keys=True, separators=(',', ':'))
         self.json.append(len(msg))
         self.json_compressed.append(len(compress(msg.encode('utf-8'))))
+        self.reduced_compressed.append(
+            len(compress(self._reduce_json(msg).encode('utf-8'))))
+
+    def _reduce_json(self, msg):
+        table = {
+            'networks': 'n',
+            'path': 'p',
+        }
+        for key, replace in table.items():
+            msg = msg.replace(key, replace)
+        return msg
 
 
 def main():
@@ -52,10 +64,11 @@ def main():
     pd.DataFrame({
         'full': pd.Series(full_acc.json),
         'full_compressed': pd.Series(full_acc.json_compressed),
+        'full_reduced': pd.Series(full_acc.reduced_compressed),
         'partial': pd.Series(partial_acc.json),
         'partial_compressed': pd.Series(partial_acc.json_compressed),
-    }, columns=['full', 'full_compressed', 'partial', 'partial_compressed']
-    ).plot.hist(bins=30)
+        'partial_reduced': pd.Series(partial_acc.reduced_compressed),
+    }).hist(bins=80)
     plt.show()
 
 
