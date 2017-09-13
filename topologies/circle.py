@@ -1,7 +1,10 @@
 import math
 import random
 
-import draw
+try:
+    import draw
+except ImportError:
+    draw = None
 from dmprsim import MobilityArea, MobilityModel
 from topologies.utils import GenericTopology
 
@@ -47,7 +50,7 @@ class CircleTopology(GenericTopology):
 
     def prepare(self):
         random.seed(self.random_seed_prep)
-        if self.visualize:
+        if self.visualize and draw:
             draw.setup_img_folder(self.log_directory)
 
         # Set all models on a circle

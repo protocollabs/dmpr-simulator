@@ -2,7 +2,10 @@ import os.path
 import random
 import subprocess
 
-import draw
+try:
+    import draw
+except ImportError:
+    draw = None
 from dmprsim import Router, gen_data_packet
 
 
@@ -54,7 +57,7 @@ class GenericTopology:
             self.tx_router.forward_packet(packet)
 
     def _draw(self, sec):
-        if self.visualize:
+        if self.visualize and draw:
             class args:
                 color_scheme = 'light'
 
