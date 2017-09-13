@@ -13,7 +13,7 @@ for density in "${densities[@]}"; do
     mkdir -p ${result}/density-${density}
 
     for size in "${sizes[@]}"; do
-        cat ${dir}/${size}-${density}-*-${interval}/len${ext} > ${result}/density-${density}/${size}
+        cat ${dir}/${size}-${density}-*-${interval}/len${ext} > ${result}/density-${density}/${size} 2>/dev/null
     done
 done
 exit 0

@@ -3,8 +3,8 @@ INTERVAL_PARTIAL = 11
 INTERVAL_FULL = 0
 
 # Choose python interpreter, prefer pypy
-PY = python3
-PYPY = $$(which pypy3 || which python3)
+PY = python3 -W ignore::UserWarning
+PYPY = $$(which pypy3 || which python3) -W ignore::UserWarning
 SH = $$(which bash || which sh)
 
 # The directory which should contain the message_size output
@@ -31,14 +31,16 @@ clean_plots:
 # generate all uncompressed density-size plots
 plot_by_density_size_uncompressed: $(all_len)
 	$(acc_by_density_size) $(INTERVAL_PARTIAL)
+	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-partial
 	$(acc_by_density_size) $(INTERVAL_FULL)
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density
+	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-full
 
 # plot all zlib density-size plots
 plot_by_density_size_zlib: $(all_len_zlib)
 	$(acc_by_density_size) $(INTERVAL_PARTIAL) -zlib
+	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-partial-zlib
 	$(acc_by_density_size) $(INTERVAL_FULL) -zlib
-	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-zlib
+	$(PY) -m analyze.message_size_plots.density_size_plots $(result_dir) -o $(result_dir)/density-full-zlib
 
 # Compute the message lengths for each configuration
 $(all_len):
