@@ -67,7 +67,7 @@ $(all_len_lzma):
 
 # Start the scenario, this takes several hours and requires at least 16 GB RAM
 START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS:
-	$(PY) -m scenarios.size_combinations
+	$(PY) -m scenarios.msg_size_combinations
 
 .PHONY: mrproper msg_size_plots plot_by_density_size_uncompressed clean_plots \
 		plot_by_density_size_zlib default \
