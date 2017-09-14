@@ -77,14 +77,17 @@ class Tracer(core.dmpr.NoOpTracer):
 
 class Router:
     def __init__(self, id_, interfaces: list, mm,
-                 log_directory: str, override_config={}, policies=None):
+                 log_directory: str, override_config={}, policies=None,
+                 tracer=None):
         self.id = id_
 
         logger_dir = os.path.join(log_directory, "logs")
         self.log = LoggerClone(logger_dir, id_)
 
         tracer_dir = os.path.join(log_directory, "trace")
-        self.tracer = Tracer(tracer_dir)
+        if tracer is None:
+            tracer = Tracer
+        self.tracer = tracer(tracer_dir)
 
         self.log_directory = log_directory
         self.mm = mm

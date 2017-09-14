@@ -29,6 +29,7 @@ class SquareTopology(GenericTopology):
                  range_factor=1,
                  name=NAME,
                  config={},
+                 tracer=None
                  ):
         super(SquareTopology, self).__init__(
             simulation_time,
@@ -39,6 +40,7 @@ class SquareTopology(GenericTopology):
             tracepoints,
             name,
             config,
+            tracer,
         )
         self.size = size
         self.interfaces = [

@@ -12,7 +12,7 @@ from dmprsim import Router, gen_data_packet
 class GenericTopology:
     def __init__(self, simulation_time: int, random_seed_runtime: int,
                  simulate_forwarding: bool, visualize: bool, log_directory: str,
-                 tracepoints: tuple, name: str, config: dict):
+                 tracepoints: tuple, name: str, config: dict, tracer=None):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
         self.simulate_forwarding = simulate_forwarding
@@ -21,6 +21,7 @@ class GenericTopology:
         self.tracepoints = tracepoints
         self.name = name
         self.config_override = config
+        self.tracer = tracer
         self.print = True
 
         if log_directory is None:
@@ -66,22 +67,27 @@ class GenericTopology:
                              sec)
 
     def _generate_routers(self, models):
+        if self.tracer:
+            router_args = {'tracer': self.tracer}
+        else:
+            router_args = {}
         return generate_routers(interfaces=self.interfaces,
                                 log_directory=self.log_directory,
                                 config_override=self.config_override,
-                                mobility_models=models)
+                                mobility_models=models,
+                                router_args=router_args)
 
     def prepare(self):
         raise NotImplementedError("A scenario needs a prepare method")
 
 
 def generate_routers(interfaces: list, mobility_models: list,
-                     log_directory: str, config_override: dict):
+                     log_directory: str, config_override: dict, router_args={}):
     routers = []
     for i, model in enumerate(mobility_models):
         ld = os.path.join(log_directory, 'routers', str(i))
         routers.append(Router(str(i), interfaces, model, ld,
-                              config_override))
+                              config_override, **router_args))
     for router in routers:
         router.register_routers(routers)
         router.connect()
