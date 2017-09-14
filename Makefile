@@ -5,7 +5,6 @@ INTERVAL_FULL = 0
 # Choose python interpreter, prefer pypy
 PY = python3 -W ignore::UserWarning
 PYPY = $$(which pypy3 || which python3) -W ignore::UserWarning
-SH = $$(which bash || which sh)
 
 # The directory which should contain the message_size output
 msg_dir = run-data/message_sizes_old
@@ -19,39 +18,44 @@ all_len_lzma = $(all_dirs:/=/len-lzma)
 
 # helpers
 process_msg = $(PYPY) -m analyze.process_messages
-acc_by_density_size = $(SH) analyze/message_size_plots/acc_by_density_size.sh $(msg_dir) $(result_dir)
-plot_size_density = $(PY) -m analyze.message_size_plots.density_size_plots $(result_dir)
+plot = $(PY) -m analyze.message_size_plots.msg_size_plots  --output $(result_dir)/graphs --input $(result_dir)
+acc = $(PY) -m analyze.message_size_plots.accumulate_lengths --input $(msg_dir) --output $(result_dir)
+
+acc_density_size = $(acc) --first density --second size
+plot_density_size = $(plot) --chartgroup density --xaxis size
+acc_loss_interval = $(acc) --first loss --second interval
+plot_loss_interval = $(plot) --chartgroup loss --xaxis interval
 
 # default catcher
 default:
 
 # Plot all available plots
-msg_size_plots: plot_by_density_size_uncompressed plot_by_density_size_zlib
+msg_size_plots: msg_size_plots_uncompressed msg_size_plots_zlib msg_size_plots_lzma
 
 # Clean all plots
 clean_plots:
 	rm -rf $(result_dir)
 
-# generate all uncompressed density-size plots
-plot_by_density_size_uncompressed: $(all_len)
-	$(acc_by_density_size) $(INTERVAL_PARTIAL)
-	$(plot_size_density) -o $(result_dir)/density-partial
-	$(acc_by_density_size) $(INTERVAL_FULL)
-	$(plot_size_density) -o $(result_dir)/density-full
+msg_size_plots_uncompressed: $(all_len)
+	$(acc_density_size) --filename len
+	$(plot_density_size)
 
-# plot all zlib density-size plots
-plot_by_density_size_zlib: $(all_len_zlib)
-	$(acc_by_density_size) $(INTERVAL_PARTIAL) -zlib
-	$(plot_size_density) -o $(result_dir)/density-partial-zlib
-	$(acc_by_density_size) $(INTERVAL_FULL) -zlib
-	$(plot_size_density) -o $(result_dir)/density-full-zlib
+	$(acc_loss_interval) --filename len
+	$(plot_loss_interval)
 
-# plot all zlib density-size plots
-plot_by_density_size_lzma: $(all_len_lzma)
-	$(acc_by_density_size) $(INTERVAL_PARTIAL) -lzma
-	$(plot_size_density) -o $(result_dir)/density-partial-lzma
-	$(acc_by_density_size) $(INTERVAL_FULL) -lzma
-	$(plot_size_density) -o $(result_dir)/density-full-lzma
+msg_size_plots_zlib: $(all_len_zlib)
+	$(acc_density_size) --filename len-zlib
+	$(plot_density_size)
+
+	$(acc_loss_interval) --filename len-zlib
+	$(plot_loss_interval)
+
+msg_size_plots_lzma: $(all_len_lzma)
+	$(acc_density_size) --filename len-lzma
+	$(plot_density_size)
+
+	$(acc_loss_interval) --filename len-lzma
+	$(plot_loss_interval)
 
 # Compute the message lengths for each configuration
 $(all_len):
@@ -69,6 +73,6 @@ $(all_len_lzma):
 START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS:
 	$(PY) -m scenarios.msg_size_combinations
 
-.PHONY: mrproper msg_size_plots plot_by_density_size_uncompressed clean_plots \
-		plot_by_density_size_zlib default \
+.PHONY: msg_size_plots clean_plots msg_size_plots_lzma\
+		default msg_size_plots_uncompressed msg_size_plots_zlib \
 		START_SIZE_COMBINATIONS_SZENARIO_WARNING_TAKES_HOURS
