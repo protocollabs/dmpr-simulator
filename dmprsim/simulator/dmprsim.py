@@ -2,39 +2,41 @@
 
 import ipaddress
 import json
+import logging
 import math
 import pathlib
 import random
-from datetime import datetime
 
-from ..core.dmpr import NoOpLogger, NoOpTracer, SimpleBandwidthPolicy, \
-    SimpleLossPolicy, dmpr
+from ..core.dmpr import NoOpTracer, SimpleBandwidthPolicy, SimpleLossPolicy, \
+    dmpr
 from ..core.dmpr.path import Path
 
 DEFAULT_PACKET_TTL = 32
+
+logger = logging.getLogger(__name__)
 
 
 class ForwardException(Exception):
     pass
 
 
-class LoggerClone(NoOpLogger):
-    def __init__(self, directory: pathlib.Path, id_, loglevel=NoOpLogger.INFO):
-        super(LoggerClone, self).__init__(loglevel)
+class TimeWrapper(object):
+    time = 0
 
-        try:
-            filename = '{0:05}.log'.format(int(id_))
-        except ValueError:
-            filename = '{}.log'.format(id_)
+    @classmethod
+    def step(cls):
+        cls.time += 1
 
-        directory.mkdir(parents=True, exist_ok=True)
-        self._log_fd = (directory / filename).open('w')
 
-    def log(self, msg, sev, time=lambda: datetime.now().isoformat()):
-        if sev < self.loglevel:
-            pass
-        msg = "{} {}\n".format(time, msg)
-        self._log_fd.write(msg)
+def patch_log_record_factory():
+    default_record_factory = logging.getLogRecordFactory()
+
+    def patch_time_factory(*args, **kwargs):
+        record = default_record_factory(*args, **kwargs)
+        record.created = TimeWrapper.time
+        return record
+
+    logging.setLogRecordFactory(patch_time_factory())
 
 
 class JSONPathEncoder(json.JSONEncoder):
@@ -81,9 +83,6 @@ class Router:
                  tracer=None):
         self.id = id_
 
-        logger_dir = log_directory / 'logs'
-        self.log = LoggerClone(logger_dir, id_)
-
         tracer_dir = log_directory / 'trace'
         if tracer is None:
             tracer = Tracer
@@ -99,7 +98,6 @@ class Router:
         self.interface_addr = {}
         self.is_transmitter = False
         self.is_receiver = False
-        self.time = 0
         self.routers = []
         self.transmission_within_second = False
         self.forwarded_packets = list()
@@ -122,7 +120,7 @@ class Router:
         self._setup_core()
 
     def _setup_core(self):
-        self._core = dmpr.DMPR(log=self.log, tracer=self.tracer)
+        self._core = dmpr.DMPR(tracer=self.tracer)
 
         self._core.register_routing_table_update_cb(
             self.routing_table_update_cb)
@@ -200,13 +198,13 @@ class Router:
         """ this function is called when core stated
         that the routing table should be updated
         """
-        self.log.info("routing table update")
+        logger.debug("routing table update")
         self.routing_table = routing_table
 
     def _route_lookup(self, packet):
         tos = packet['tos']  # e.g. "lowest-loss"
         if not tos in self.routing_table:
-            print("no policy routing table named: {}".format(tos))
+            logger.info("no policy routing table named: {}".format(tos))
             raise ForwardException("wrong tos")
 
         dst_prefix = packet['dst-prefix']
@@ -236,12 +234,12 @@ class Router:
 
     def forward_packet(self, packet):
         if packet['ttl'] <= 0:
-            self.log.info('drop packet, ttl 0')
+            logger.info('drop packet, ttl 0')
             return
 
         if self._data_packet_reached_dst(packet):
             hops = DEFAULT_PACKET_TTL - packet['ttl']
-            print("packet reached destination with {} hops".format(hops))
+            logger.info("packet reached destination with {} hops".format(hops))
             return
 
         packet['ttl'] -= 1
@@ -250,12 +248,13 @@ class Router:
         try:
             router = self._route_lookup(packet)
         except ForwardException as e:
-            print("route lookup failed, drop packet, no next hop\n{}".format(e))
-            print(packet['path'])
+            logger.info(
+                "route lookup failed, drop packet, no next hop\n{}".format(e))
+            logger.info(packet['path'])
             return
 
-        print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id,
-                                                      router.id))
+        logger.info("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'],
+                                                            self.id, router.id))
         self.forwarded_packets.append([packet['tos'], self, router])
         router.forward_packet(packet)
 
@@ -267,8 +266,7 @@ class Router:
         msg_json = json.dumps(msg)
 
         emsg = "msg transmission [interface:{}, proto:{}, addr:{}]"
-        self.log.info(emsg.format(interface_name, proto, dst_mcast_addr),
-                      time=self.get_time())
+        logger.debug(emsg.format(interface_name, proto, dst_mcast_addr))
         # send message to all connected routers
         for r_obj in self.connections[interface_name].values():
             r_obj.msg_rx(interface_name, msg_json)
@@ -283,18 +281,18 @@ class Router:
         self.routers = r
 
     def get_time(self):
-        return self.time
+        return TimeWrapper.time
 
     def step(self, time):
         # new round, reset to no transmission
         self.transmission_within_second = False
-        self.time = time
+        TimeWrapper.step()
         self.mm.step()
         self.connect()
         self._core.tick()
 
     def start(self, time):
-        self.time = time
+        TimeWrapper.time = time
         self._core.start()
 
     def stop(self):

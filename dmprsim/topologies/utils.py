@@ -1,3 +1,4 @@
+import logging
 import random
 import subprocess
 from pathlib import Path
@@ -7,6 +8,8 @@ try:
 except ImportError:
     draw = None
 from dmprsim.simulator.dmprsim import Router, gen_data_packet
+
+logger = logging.getLogger(__name__)
 
 
 class GenericTopology:
@@ -54,8 +57,8 @@ class GenericTopology:
 
         for sec in range(self.simulation_time):
             if not self.quiet:
-                print("{}\n\ttime: {}/{}".format("=" * 50, sec,
-                                                 self.simulation_time))
+                logger.info("{}\n\ttime: {}/{}".format("=" * 50, sec,
+                                                       self.simulation_time))
             for router in self.routers:
                 router.step(sec)
 
@@ -106,6 +109,8 @@ def generate_routers(interfaces: list, mobility_models: list,
 def ffmpeg(directory: Path):
     source = directory / 'images-range-tx-merge' / '*.png'
     dest = directory / 'dmpr.mp4'
+    logger.info("Generating movie at {}".format(dest))
+
     subprocess.call(('ffmpeg',
                      '-framerate', '10',
                      '-pattern_type', 'glob',

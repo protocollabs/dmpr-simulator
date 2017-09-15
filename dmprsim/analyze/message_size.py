@@ -3,6 +3,7 @@ Generate one plot per `chartgroup` with `xaxis` as the x-axis and message size
 as the y-axis
 """
 
+import logging
 import shutil
 from pathlib import Path
 from typing import Union
@@ -83,6 +84,8 @@ PLOTS = {
         ('interval', {'density': '*', 'size': '*', 'compression': 'zlib'}),
     ),
 }
+
+logger = logging.getLogger(__name__)
 
 
 def accumulate(input: Path, globs: dict, filename: str,
@@ -188,7 +191,7 @@ def main(args: object, result_path: Path, scenario_path: Path):
     if not (scenario_path / '.done').exists():
         run_scenario(args, scenario_path)
 
-    print("Start plotting")
+    logger.info("Start plotting")
     shutil.rmtree(str(result_path), ignore_errors=True)
     for chartgroup in PLOTS:
         for xaxis, conf in PLOTS[chartgroup]:

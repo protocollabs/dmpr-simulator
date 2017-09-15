@@ -25,5 +25,4 @@ for sec in simulation.start():
         routers[1].mm.visible = False
 
 dest_dir = Path.cwd() / 'run-data' / NAME
-print("generating movie in {}".format(dest_dir))
 ffmpeg(dest_dir)

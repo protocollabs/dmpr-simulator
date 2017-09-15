@@ -1,5 +1,6 @@
 import functools
 import itertools
+import logging
 import math
 import multiprocessing
 import pickle
@@ -17,6 +18,8 @@ AVG_MSG_INTERVAL = DMPRDefaultConfiguration.rtn_msg_interval + \
 
 EFFECTIVE_SIMULATION_TIME = 1200
 SETTLING_TIME_BUFFER = 100
+
+logger = logging.getLogger(__name__)
 
 
 class FilterTracer(dmprsim.Tracer):
@@ -54,18 +57,19 @@ class MessageSizeScenario(object):
         ram = getattr(self.args, 'max_ram', 16)
         if ram < 2:
             print("Need at least 16 GB")
+            exit(1)
 
-        print("Starting low memory scenarios, ~2GB each")
+        logger.info("Starting low memory scenarios, ~2GB each")
         self._apply(math.floor(ram / 2), low_memory)
-        print("Starting mid memory scenarios, ~4GB each")
+        logger.info("Starting mid memory scenarios, ~4GB each")
         self._apply(math.floor(ram / 2), mid_memory)
-        print("Starting high memory scenarios, ~8GB each")
+        logger.info("Starting high memory scenarios, ~8GB each")
         self._apply(math.floor(ram / 2), high_memory)
-        print("Starting very high memory scenarios, ~12GB each")
+        logger.info("Starting very high memory scenarios, ~12GB each")
         self._apply(math.floor(ram / 2), very_high_memory)
 
         (self.log_directory / '.done').touch()
-        print("Scenarios done")
+        logger.info("Scenarios done")
 
     def _save_checkpoint(self, data):
         self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +96,7 @@ class MessageSizeScenario(object):
                     sorted(data, key=lambda k: random.random()),
                     chunksize=5):
                 cur += 1
-                print('DONE: {:.2%}'.format(cur / num))
+                logger.info('DONE: {:.2%}'.format(cur / num))
                 done.add(processed)
                 if cur % 100 == 0:
                     self._save_checkpoint(done)
@@ -123,8 +127,8 @@ class MessageSizeScenario(object):
 
         tracer = functools.partial(FilterTracer, min_time=min_trace_time)
 
-        print("Starting scenario: size {size}x{size} loss {loss:.0%} "
-              "density {mesh:.2f} interval {interval} time {time}".format(
+        logger.info("Starting scenario: size {size}x{size} loss {loss:.0%} "
+                    "density {mesh:.2f} interval {interval} time {time}".format(
             size=size, loss=loss, mesh=mesh, interval=full_interval,
             time=simu_time))
 

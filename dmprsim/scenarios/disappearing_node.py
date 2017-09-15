@@ -40,7 +40,6 @@ def main(args, scenario_path: Path, result_path: Path):
             routers[1].mm.visible = True
 
     if simulation.gen_movie:
-        print("generating movie in {}".format(result_path))
         ffmpeg(result_path)
 
 

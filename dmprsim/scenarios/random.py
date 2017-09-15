@@ -22,5 +22,4 @@ for sec in simulation.start():
     pass
 
 dest_dir = Path.cwd() / 'run-data' / 'large_moving'
-print("generating movie in {}".format(dest_dir))
 ffmpeg(dest_dir)
