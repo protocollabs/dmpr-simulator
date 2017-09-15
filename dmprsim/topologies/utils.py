@@ -3,7 +3,7 @@ import random
 import subprocess
 
 try:
-    from simulator import draw
+    from dmprsim.simulator import draw
 except ImportError:
     draw = None
 from dmprsim.simulator.dmprsim import Router, gen_data_packet
