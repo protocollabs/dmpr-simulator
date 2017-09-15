@@ -11,11 +11,6 @@ RESULT_PATH = Path('results')
 SCENARIO_PATH = RESULT_PATH / '.scenarios'
 
 
-def _add_default_arguments(parser: argparse.ArgumentParser):
-    parser.add_argument('--enable-video', action='store_true')
-    parser.add_argument('--enable-images', action='store_true')
-
-
 class AbstractAnalyzer(object):
     NAME = 'abstract'
     NUM = 0
@@ -25,9 +20,19 @@ class AbstractAnalyzer(object):
     def argparser(cls, sub_parser: argparse._SubParsersAction):
         parser = sub_parser.add_parser(cls.NAME, aliases=[str(cls.NUM)])
         if cls.DEFAULT_ARGUMENTS:
-            _add_default_arguments(parser)
+            cls._add_default_arguments(parser)
         cls.add_args(parser)
         parser.set_defaults(func=cls.run)
+
+    @staticmethod
+    def _add_default_arguments(parser: argparse.ArgumentParser):
+        parser.add_argument('--enable-video', action='store_true')
+        parser.add_argument('--enable-images', action='store_true')
+        # Option to force quiet mode, default is set by scenario
+        parser.add_argument('--quiet', action='store_const', const=True,
+                            default=argparse.SUPPRESS)
+        parser.add_argument('--verbose', action='store_const', const=True,
+                            default=argparse.SUPPRESS)
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -44,7 +49,6 @@ class MessageSize(AbstractAnalyzer):
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
-        parser.add_argument('--quiet', type=bool, default=True)
         parser.add_argument('--max-ram', default=16, type=int,
                             help='Maximum RAM in GB')
 

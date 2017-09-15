@@ -31,8 +31,8 @@ class GenericTopology:
 
         self.simulate_forwarding = getattr(args, 'simulate_forwarding', False)
         self.quiet = getattr(args, 'quiet', False)
-        self.gen_images = getattr(args, 'images', False)
-        self.gen_movie = getattr(args, 'movie', False)
+        self.gen_images = getattr(args, 'enable_images', False)
+        self.gen_movie = getattr(args, 'enable_video', False)
         if self.gen_movie and not self.gen_images:
             self.gen_images = True
 

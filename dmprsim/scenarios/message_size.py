@@ -140,8 +140,8 @@ class MessageSizeScenario(object):
             router_args={'tracer': tracer},
             args=self.args,
         )
+        sim.quiet = not getattr(args, 'verbose', False)
         sim.interfaces[0]['rx-loss'] = loss
-        sim.print = False
         sim.prepare()
         for _ in sim.start():
             pass
