@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from dmprsim.topologies.circle import CircleTopology
 from dmprsim.topologies.utils import ffmpeg
@@ -24,6 +24,6 @@ for sec in simulation.start():
     if sec == 150:
         routers[1].mm.visible = False
 
-dest_dir = os.path.join(os.getcwd(), 'run-data', NAME)
+dest_dir = Path.cwd() / 'run-data' / NAME
 print("generating movie in {}".format(dest_dir))
 ffmpeg(dest_dir)

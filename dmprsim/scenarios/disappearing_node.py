@@ -41,8 +41,8 @@ def main(args, scenario_path: Path, result_path: Path):
 
     if simulation.gen_movie:
         print("generating movie in {}".format(result_path))
-        ffmpeg(str(result_path))
+        ffmpeg(result_path)
 
 
 if __name__ == '__main__':
-    main(object(), Path('.'), Path('.'))
+    main(object(), Path.cwd(), Path.cwd())

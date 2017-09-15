@@ -1,6 +1,6 @@
 import math
-import os
 import shutil
+from pathlib import Path
 
 import cairo
 from PIL import Image
@@ -130,7 +130,7 @@ def color_text_inverse(args):
         return color_text_inverse_dark()
 
 
-def draw_router_loc(args, ld, area, r, img_idx):
+def draw_router_loc(args, ld: Path, area, r, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, area.x, area.y)
@@ -247,7 +247,7 @@ def draw_router_loc(args, ld, area, r, img_idx):
         ctx.show_text(str(router.id))
         ctx.set_antialias(True)
 
-    full_path = os.path.join(ld, "images-range", "{0:05}.png".format(img_idx))
+    full_path = ld / "images-range" / "{0:05}.png".format(img_idx)
     surface.write_to_png(full_path)
 
 
@@ -281,7 +281,7 @@ def color_tx_links(args):
         return color_tx_links_dark()
 
 
-def draw_router_transmission(args, ld, area, r, img_idx):
+def draw_router_transmission(args, ld: Path, area, r, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
     ctx = cairo.Context(surface)
     ctx.rectangle(0, 0, area.x, area.y)
@@ -340,15 +340,14 @@ def draw_router_transmission(args, ld, area, r, img_idx):
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
-    full_path = os.path.join(ld, "images-tx", "{0:05}.png".format(img_idx))
+    full_path = ld / "images-tx", "{0:05}.png".format(img_idx)
     surface.write_to_png(full_path)
 
 
-def image_merge(args, ld, img_idx):
-    m_path = os.path.join(ld, "images-range-tx-merge",
-                          "{0:05}.png".format(img_idx))
-    r_path = os.path.join(ld, "images-range", "{0:05}.png".format(img_idx))
-    t_path = os.path.join(ld, "images-tx", "{0:05}.png".format(img_idx))
+def image_merge(ld: Path, img_idx: int):
+    m_path = ld / "images-range-tx-merge" / "{0:05}.png".format(img_idx)
+    r_path = ld / "images-range", "{0:05}.png".format(img_idx)
+    t_path = ld / "images-tx" / "{0:05}.png".format(img_idx)
 
     images = map(Image.open, [r_path, t_path])
     new_im = Image.new('RGB', (1920, 1080))
@@ -360,16 +359,15 @@ def image_merge(args, ld, img_idx):
     new_im.save(m_path, "PNG")
 
 
-def draw_images(args, ld, area, r, img_idx):
+def draw_images(args, ld: Path, area, r, img_idx):
     draw_router_loc(args, ld, area, r, img_idx)
     draw_router_transmission(args, ld, area, r, img_idx)
 
-    image_merge(args, ld, img_idx)
+    image_merge(ld, img_idx)
 
 
-def setup_img_folder(log_directory):
+def setup_img_folder(log_directory: Path):
     for path in ("images-range", "images-tx", "images-range-tx-merge"):
-        f_path = os.path.join(log_directory, path)
-        if os.path.exists(f_path):
-            shutil.rmtree(f_path)
-        os.makedirs(f_path, exist_ok=True)
+        path = log_directory / path
+        shutil.rmtree(str(path), ignore_errors=True)
+        path.mkdir(parents=True, exist_ok=True)

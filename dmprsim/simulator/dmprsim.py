@@ -3,13 +3,12 @@
 import ipaddress
 import json
 import math
-import os
+import pathlib
 import random
-import shutil
 from datetime import datetime
 
-from ..core.dmpr import NoOpLogger, NoOpTracer, dmpr, SimpleLossPolicy, \
-    SimpleBandwidthPolicy
+from ..core.dmpr import NoOpLogger, NoOpTracer, SimpleBandwidthPolicy, \
+    SimpleLossPolicy, dmpr
 from ..core.dmpr.path import Path
 
 DEFAULT_PACKET_TTL = 32
@@ -20,7 +19,7 @@ class ForwardException(Exception):
 
 
 class LoggerClone(NoOpLogger):
-    def __init__(self, directory, id_, loglevel=NoOpLogger.INFO):
+    def __init__(self, directory: pathlib.Path, id_, loglevel=NoOpLogger.INFO):
         super(LoggerClone, self).__init__(loglevel)
 
         try:
@@ -28,8 +27,8 @@ class LoggerClone(NoOpLogger):
         except ValueError:
             filename = '{}.log'.format(id_)
 
-        os.makedirs(directory, exist_ok=True)
-        self._log_fd = open(os.path.join(directory, filename), 'w')
+        directory.mkdir(parents=True, exist_ok=True)
+        self._log_fd = (directory / filename).open('w')
 
     def log(self, msg, sev, time=lambda: datetime.now().isoformat()):
         if sev < self.loglevel:
@@ -46,19 +45,19 @@ class JSONPathEncoder(json.JSONEncoder):
 
 
 class Tracer(NoOpTracer):
-    def __init__(self, directory, enable: list = None):
+    def __init__(self, directory: pathlib.Path, enable: list = None):
         self.enabled = {}
         if enable is not None:
             for tracer in enable:
                 self.enable(tracer)
 
-        os.makedirs(directory, exist_ok=True)
+        directory.mkdir(parents=True, exist_ok=True)
         self.directory = directory
 
     def enable(self, tracepoint):
         if tracepoint not in self.enabled:
-            path = os.path.join(self.directory, tracepoint)
-            self.enabled[tracepoint] = open(path, 'w')
+            path = self.directory / tracepoint
+            self.enabled[tracepoint] = path.open('w')
 
     def get_files(self, tracepoint: str) -> list:
         result = []
@@ -78,14 +77,14 @@ class Tracer(NoOpTracer):
 
 class Router:
     def __init__(self, id_, interfaces: list, mm,
-                 log_directory: str, override_config={}, policies=None,
+                 log_directory: pathlib.Path, override_config={}, policies=None,
                  tracer=None):
         self.id = id_
 
-        logger_dir = os.path.join(log_directory, "logs")
+        logger_dir = log_directory / 'logs'
         self.log = LoggerClone(logger_dir, id_)
 
-        tracer_dir = os.path.join(log_directory, "trace")
+        tracer_dir = log_directory / 'trace'
         if tracer is None:
             tracer = Tracer
         self.tracer = tracer(tracer_dir)
@@ -187,8 +186,8 @@ class Router:
         return c
 
     def _dump_config(self, config):
-        filename = os.path.join(self.log_directory, 'config')
-        with open(filename, 'w') as file:
+        filename = self.log_directory / 'config'
+        with filename.open('w') as file:
             file.write(json.dumps(config, sort_keys=True,
                                   indent=4, separators=(',', ': ')))
 
@@ -352,13 +351,6 @@ def gen_data_packet(src_id, dst_ip, tos='lowest-loss'):
         'tos': tos,
         'path': []
     }
-
-
-def setup_log_folder(scenario_name):
-    ld = os.path.join("run-data", scenario_name, "logs")
-    if os.path.exists(ld):
-        shutil.rmtree(ld)
-    os.makedirs(ld)
 
 
 class MobilityArea(object):

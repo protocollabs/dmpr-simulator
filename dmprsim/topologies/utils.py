@@ -1,6 +1,6 @@
-import os.path
 import random
 import subprocess
+from pathlib import Path
 
 try:
     from dmprsim.simulator import draw
@@ -13,7 +13,7 @@ class GenericTopology:
     def __init__(self,
                  simulation_time: int = 100,
                  random_seed_runtime: int = 1,
-                 log_directory: str = None,
+                 log_directory: Path = None,
                  tracepoints: tuple = (),
                  name: str = 'generic',
                  core_config: dict = {},
@@ -37,9 +37,8 @@ class GenericTopology:
             self.gen_images = True
 
         if log_directory is None:
-            self.log_directory = os.path.join(os.getcwd(), 'run-data',
-                                              self.name)
-            os.makedirs(self.log_directory, exist_ok=True)
+            self.log_directory = Path.cwd() / 'run-data' / self.name
+            self.log_directory.mkdir(parents=True, exist_ok=True)
 
         self.tx_router = None
         self.rx_ip = None
@@ -90,11 +89,12 @@ class GenericTopology:
 
 
 def generate_routers(interfaces: list, mobility_models: list,
-                     log_directory: str, config_override: dict, router_args={}):
+                     log_directory: Path, config_override: dict,
+                     router_args={}):
     routers = []
     for i, model in enumerate(mobility_models):
-        ld = os.path.join(log_directory, 'routers', str(i))
-        routers.append(Router(str(i), interfaces, model, ld,
+        ld = log_directory / 'routers' / str(i)
+        routers.append(Router(str(i), interfaces, model, str(ld),
                               config_override, **router_args))
     for router in routers:
         router.register_routers(routers)
@@ -103,14 +103,14 @@ def generate_routers(interfaces: list, mobility_models: list,
     return routers
 
 
-def ffmpeg(directory: str):
-    source = os.path.join(directory, 'images-range-tx-merge', '*.png')
-    dest = os.path.join(directory, 'dmpr.mp4')
+def ffmpeg(directory: Path):
+    source = directory / 'images-range-tx-merge' / '*.png'
+    dest = directory / 'dmpr.mp4'
     subprocess.call(('ffmpeg',
                      '-framerate', '10',
                      '-pattern_type', 'glob',
-                     '-i', source,
+                     '-i', str(source),
                      '-c:v', 'libx264',
                      '-pix_fmt', 'yuv420p',
                      '-y',
-                     dest))
+                     str(dest)))

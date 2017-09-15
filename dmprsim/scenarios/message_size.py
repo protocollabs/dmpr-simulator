@@ -52,7 +52,7 @@ class MessageSizeScenario(object):
         mid_memory = {c for c in combinations if c[0] >= 9 and c[1] >= 2}
         low_memory = combinations - mid_memory
 
-        ram = self.args.max_ram
+        ram = getattr(self.args, 'max_ram', 16)
         if ram < 2:
             print("Need at least 16 GB")
 
@@ -150,8 +150,7 @@ class MessageSizeScenario(object):
 
 if __name__ == '__main__':
     args = object()
-    args.path = os.getcwd()
-    s = MessageSizeScenario(args, Path(os.getcwd()),
+    s = MessageSizeScenario(args, Path.cwd(),
                             sizes=(1, 2),
                             meshes=(1, 2),
                             losses=(0, 10),

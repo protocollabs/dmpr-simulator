@@ -2,8 +2,8 @@
 Just a large random network which moves slowly
 """
 
-import os
 import random
+from pathlib import Path
 
 from dmprsim.topologies.randomized import RandomTopology
 from dmprsim.topologies.utils import ffmpeg
@@ -21,6 +21,6 @@ routers = simulation.prepare()
 for sec in simulation.start():
     pass
 
-dest_dir = os.path.join(os.getcwd(), 'run-data', 'large_moving')
+dest_dir = Path.cwd() / 'run-data' / 'large_moving'
 print("generating movie in {}".format(dest_dir))
 ffmpeg(dest_dir)
