@@ -70,6 +70,16 @@ class DisappearingNode(AbstractAnalyzer):
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
 
 
+class ProfileCore(AbstractAnalyzer):
+    NUM = 3
+    NAME = '{:03}-profile-core'.format(NUM)
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.profile_core import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=lambda args: parser.print_help())
@@ -77,6 +87,7 @@ def main():
                                         description="valid analyze scripts")
     MessageSize.argparser(sub_parsers)
     DisappearingNode.argparser(sub_parsers)
+    ProfileCore.argparser(sub_parsers)
 
     args = parser.parse_args()
     args.func(args)
