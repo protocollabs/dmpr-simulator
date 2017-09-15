@@ -4,9 +4,10 @@ requires rx.msg.valid tracepoint
 """
 import argparse
 import json
-import os
 
 from seqdiag import drawer, builder, parser as seq_parser
+
+from dmprsim.analyze._utils.extract_messages import all_tracefiles, extract_messages
 
 skel = """
    seqdiag {{
@@ -16,24 +17,13 @@ skel = """
 """
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate sequence diagrams")
-    parser.add_argument('--type', default='SVG',
-                        help='could be SVG, PNG, default: SVG')
-    parser.add_argument('dir', help='the scenario output directory')
-    parser.add_argument('output', help='the output filename')
-    args = parser.parse_args()
-
-    routers_dir = os.path.join(args.dir, 'routers')
-    routers = os.listdir(routers_dir)
+def main(input, output, format):
+    routers = set()
     messages = {}
-    for router in routers:
-        with open(os.path.join(routers_dir, router, 'trace',
-                               'rx.msg.valid')) as f:
-            for line in f:
-                time = line.split()[0]
-                msg = ''.join(line.split()[1:])
-                messages.setdefault(time, []).append((router, msg))
+    for router, tracefile in all_tracefiles(input, 'rx.msg.valid'):
+        routers.add(router)
+        for time, message in extract_messages(tracefile):
+            messages.setdefault(time, []).append((router, message))
 
     diag = []
     diag_skel = '{sender} -> {receiver} [label="{time}\n{type}\n{data}"]'
@@ -62,10 +52,16 @@ def main():
 
     tree = seq_parser.parse_string(result)
     diagram = builder.ScreenNodeBuilder.build(tree)
-    draw = drawer.DiagramDraw(args.type, diagram, filename=args.output)
+    draw = drawer.DiagramDraw(format, diagram, filename=output)
     draw.draw()
     draw.save()
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Generate sequence diagrams")
+    parser.add_argument('--format', default='SVG', choices=('SVG, PNG'),
+                        help='ouput format, default: SVG')
+    parser.add_argument('input', help='the scenario results directory')
+    parser.add_argument('output', help='the output filename')
+    args = parser.parse_args()
+    main(args.input, args.output, args.format)

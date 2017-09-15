@@ -3,26 +3,38 @@ import random
 import subprocess
 
 try:
-    import draw
+    from simulator import draw
 except ImportError:
     draw = None
-from dmprsim import Router, gen_data_packet
+from dmprsim.simulator.dmprsim import Router, gen_data_packet
 
 
 class GenericTopology:
-    def __init__(self, simulation_time: int, random_seed_runtime: int,
-                 simulate_forwarding: bool, visualize: bool, log_directory: str,
-                 tracepoints: tuple, name: str, config: dict, tracer=None):
+    def __init__(self,
+                 simulation_time: int = 100,
+                 random_seed_runtime: int = 1,
+                 log_directory: str = None,
+                 tracepoints: tuple = (),
+                 name: str = 'generic',
+                 core_config: dict = {},
+                 router_args: dict = {},
+                 args: object = object(),
+                 ):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
-        self.simulate_forwarding = simulate_forwarding
-        self.visualize = visualize
         self.log_directory = log_directory
         self.tracepoints = tracepoints
         self.name = name
-        self.config_override = config
-        self.tracer = tracer
-        self.print = True
+        self.config_override = core_config
+        self.router_args = router_args
+        self.args = args
+
+        self.simulate_forwarding = getattr(args, 'simulate_forwarding', False)
+        self.quiet = getattr(args, 'quiet', False)
+        self.gen_images = getattr(args, 'images', False)
+        self.gen_movie = getattr(args, 'movie', False)
+        if self.gen_movie and not self.gen_images:
+            self.gen_images = True
 
         if log_directory is None:
             self.log_directory = os.path.join(os.getcwd(), 'run-data',
@@ -42,7 +54,7 @@ class GenericTopology:
         random.seed(self.random_seed_runtime)
 
         for sec in range(self.simulation_time):
-            if self.print:
+            if not self.quiet:
                 print("{}\n\ttime: {}/{}".format("=" * 50, sec,
                                                  self.simulation_time))
             for router in self.routers:
@@ -59,7 +71,7 @@ class GenericTopology:
             self.tx_router.forward_packet(packet)
 
     def _draw(self, sec):
-        if self.visualize and draw:
+        if self.gen_images and draw:
             class args:
                 color_scheme = 'light'
 
@@ -67,15 +79,11 @@ class GenericTopology:
                              sec)
 
     def _generate_routers(self, models):
-        if self.tracer:
-            router_args = {'tracer': self.tracer}
-        else:
-            router_args = {}
         return generate_routers(interfaces=self.interfaces,
                                 log_directory=self.log_directory,
                                 config_override=self.config_override,
                                 mobility_models=models,
-                                router_args=router_args)
+                                router_args=self.router_args)
 
     def prepare(self):
         raise NotImplementedError("A scenario needs a prepare method")

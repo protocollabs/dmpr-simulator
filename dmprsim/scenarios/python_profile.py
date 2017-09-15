@@ -2,7 +2,7 @@
 A quick scenario for code profiling
 """
 
-from topologies.randomized import RandomTopology
+from dmprsim.topologies.randomized import RandomTopology
 
 sim = RandomTopology(
     name='profile_test',
@@ -10,8 +10,6 @@ sim = RandomTopology(
     num_routers=150,
     area=(500, 500),
     velocity=lambda: 0.05,
-    visualize=False,
-    simulate_forwarding=False,
 )
 
 sim.prepare()

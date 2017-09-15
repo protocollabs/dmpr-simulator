@@ -1,7 +1,7 @@
 import os
 
-from topologies.circle import CircleTopology
-from topologies.utils import ffmpeg
+from dmprsim.topologies.circle import CircleTopology
+from dmprsim.topologies.utils import ffmpeg
 
 SIMULATION_TIME = 500
 NAME = 'circle_with_removing'
@@ -11,7 +11,6 @@ simulation = CircleTopology(
     tracepoints=('tx.msg',),
     name=NAME,
     num_routers=8,
-    simulate_forwarding=False
 )
 routers = simulation.prepare()
 

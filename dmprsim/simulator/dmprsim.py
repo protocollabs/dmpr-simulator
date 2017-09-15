@@ -8,8 +8,9 @@ import random
 import shutil
 from datetime import datetime
 
-import core.dmpr
-import core.dmpr.path
+from ..core.dmpr import NoOpLogger, NoOpTracer, dmpr, SimpleLossPolicy, \
+    SimpleBandwidthPolicy
+from ..core.dmpr.path import Path
 
 DEFAULT_PACKET_TTL = 32
 
@@ -18,8 +19,8 @@ class ForwardException(Exception):
     pass
 
 
-class LoggerClone(core.dmpr.NoOpLogger):
-    def __init__(self, directory, id_, loglevel=core.dmpr.NoOpLogger.INFO):
+class LoggerClone(NoOpLogger):
+    def __init__(self, directory, id_, loglevel=NoOpLogger.INFO):
         super(LoggerClone, self).__init__(loglevel)
 
         try:
@@ -39,12 +40,12 @@ class LoggerClone(core.dmpr.NoOpLogger):
 
 class JSONPathEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, core.dmpr.path.Path):
+        if isinstance(o, Path):
             return '>'.join(o.nodes)
         return json.JSONEncoder.default(self, o)
 
 
-class Tracer(core.dmpr.NoOpTracer):
+class Tracer(NoOpTracer):
     def __init__(self, directory, enable: list = None):
         self.enabled = {}
         if enable is not None:
@@ -108,8 +109,8 @@ class Router:
 
         self.policies = policies
         if policies is None:
-            self.policies = (core.dmpr.SimpleBandwidthPolicy(),
-                             core.dmpr.SimpleLossPolicy())
+            self.policies = (SimpleBandwidthPolicy(),
+                             SimpleLossPolicy())
 
         for interface in interfaces:
             self.connections[interface['name']] = dict()
@@ -122,7 +123,7 @@ class Router:
         self._setup_core()
 
     def _setup_core(self):
-        self._core = core.dmpr.DMPR(log=self.log, tracer=self.tracer)
+        self._core = dmpr.DMPR(log=self.log, tracer=self.tracer)
 
         self._core.register_routing_table_update_cb(
             self.routing_table_update_cb)
@@ -345,7 +346,7 @@ class Router:
 
 def gen_data_packet(src_id, dst_ip, tos='lowest-loss'):
     return {
-        'src-router': src_id,
+        'dmprsim-router': src_id,
         'dst-prefix': dst_ip,
         'ttl': DEFAULT_PACKET_TTL,
         'tos': tos,

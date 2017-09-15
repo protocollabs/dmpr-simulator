@@ -4,11 +4,11 @@ One run for full mode, one for partial
 """
 import os
 
-from topologies.circle import CircleTopology
-from topologies.utils import ffmpeg
+from dmprsim.topologies.circle import CircleTopology
+from dmprsim.topologies.utils import ffmpeg
 
 SIMULATION_TIME = 1200
-NAME = 'circle_with_disappearing_node'
+NAME = 'disappearing_node'
 MOVIE_GEN = False
 
 CONFIGS = {
@@ -30,9 +30,7 @@ def main():
             tracepoints=('tx.msg',),
             name=mode_name,
             num_routers=8,
-            simulate_forwarding=False,
-            visualize=MOVIE_GEN,
-            config=mode_config,
+            core_config=mode_config,
         )
         routers = simulation.prepare()
 

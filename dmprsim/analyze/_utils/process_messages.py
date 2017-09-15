@@ -5,27 +5,36 @@ Helper methods to process tracefiles
 import argparse
 import lzma
 import zlib
+from pathlib import Path
 
-from analyze.extract_messages import extract_messages
+from dmprsim.analyze._utils.extract_messages import extract_messages
 
 
-def message_lengths(input_file):
-    messages = extract_messages(input_file)
+def extract(input_file: Path):
+    try:
+        _, messages = zip(*extract_messages(input_file))
+        return messages
+    except ValueError:
+        return ()
+
+
+def message_lengths(input_file: Path):
+    messages = extract(input_file)
     return (len(m) for m in messages)
 
 
-def message_lengths_zlib(input_file):
-    messages = extract_messages(input_file)
+def message_lengths_zlib(input_file: Path):
+    messages = extract(input_file)
     return (len(zlib.compress(m.encode('utf-8'))) for m in messages)
 
 
-def message_lengths_lzma(input_file):
-    messages = extract_messages(input_file)
+def message_lengths_lzma(input_file: Path):
+    messages = extract(input_file)
     return (len(lzma.compress(m.encode('utf-8'))) for m in messages)
 
 
-def process_files(dirs, output, action):
-    with open(output, 'w') as f:
+def process_files(dirs: list, output: Path, action: callable):
+    with output.open('w') as f:
         for input_file in dirs:
             f.write('\n'.join(str(i) for i in action(input_file)))
             f.write('\n')

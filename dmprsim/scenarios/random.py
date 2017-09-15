@@ -5,8 +5,8 @@ Just a large random network which moves slowly
 import os
 import random
 
-from topologies.randomized import RandomTopology
-from topologies.utils import ffmpeg
+from dmprsim.topologies.randomized import RandomTopology
+from dmprsim.topologies.utils import ffmpeg
 
 SIMULATION_TIME = 20
 

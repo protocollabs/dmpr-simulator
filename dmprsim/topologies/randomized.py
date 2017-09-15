@@ -1,11 +1,11 @@
 import random
 
 try:
-    import draw
+    from simulator import draw
 except ImportError:
     draw = None
-from dmprsim import MobilityArea, MobilityModel
-from topologies.utils import GenericTopology
+from dmprsim.simulator.dmprsim import MobilityArea, MobilityModel
+from dmprsim.topologies.utils import GenericTopology
 
 
 class RandomTopology(GenericTopology):
@@ -20,30 +20,31 @@ class RandomTopology(GenericTopology):
     ]
 
     def __init__(self,
-                 simulation_time=SIMULATION_TIME,
-                 num_routers=NUM_ROUTERS,
-                 area=DEFAULT_AREA,
-                 interfaces=DEFAULT_INTERFACES,
-                 random_seed_prep=DEFAULT_RAND_SEED,
-                 random_seed_runtime=DEFAULT_RAND_SEED,
+                 simulation_time: int = SIMULATION_TIME,
+                 random_seed_runtime: int = DEFAULT_RAND_SEED,
+                 log_directory: str = None,
+                 tracepoints: tuple = (),
+                 name: str = NAME,
+                 core_config: dict = {},
+                 router_args: dict = {},
+                 args: object = object(),
+
+                 num_routers: int = NUM_ROUTERS,
+                 area: tuple = DEFAULT_AREA,
+                 interfaces: list = DEFAULT_INTERFACES,
+                 random_seed_prep: int = DEFAULT_RAND_SEED,
                  velocity=lambda: 0,
-                 visualize=True,
-                 simulate_forwarding=True,
-                 disappearance_pattern=(0, 0, 0),
-                 tracepoints=(),
-                 log_directory=None,
-                 name=NAME,
-                 config={},
+                 disappearance_pattern: tuple = (0, 0, 0),
                  ):
         super(RandomTopology, self).__init__(
-            simulation_time,
-            random_seed_runtime,
-            simulate_forwarding,
-            visualize,
-            log_directory,
-            tracepoints,
-            name,
-            config,
+            simulation_time=simulation_time,
+            random_seed_runtime=random_seed_runtime,
+            log_directory=log_directory,
+            tracepoints=tracepoints,
+            name=name,
+            core_config=core_config,
+            router_args=router_args,
+            args=args,
         )
         self.num_routers = num_routers
         self.area = MobilityArea(*area)
@@ -55,7 +56,7 @@ class RandomTopology(GenericTopology):
     def prepare(self):
         random.seed(self.random_seed_prep)
 
-        if self.visualize and draw:
+        if self.gen_images and draw:
             draw.setup_img_folder(self.log_directory)
 
         models = (MobilityModel(self.area,
