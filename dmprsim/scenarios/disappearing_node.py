@@ -19,7 +19,7 @@ def main(args, scenario_path: Path, result_path: Path):
     simulation = CircleTopology(
         simulation_time=SIMULATION_TIME,
         tracepoints=('tx.msg',),
-        log_directory=str(scenario_path),
+        log_directory=scenario_path,
         num_routers=8,
         core_config=CONFIG,
         args=args,

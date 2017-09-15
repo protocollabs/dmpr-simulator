@@ -14,7 +14,7 @@ def main(args, log_directory: Path):
         area=(500, 500),
         velocity=lambda: 0.05,
         args=args,
-        log_directory=str(log_directory),
+        log_directory=log_directory,
     )
     sim.prepare()
 

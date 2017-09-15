@@ -1,5 +1,6 @@
 import math
 import random
+from pathlib import Path
 
 try:
     from dmprsim.simulator import draw
@@ -18,7 +19,7 @@ class CircleTopology(GenericTopology):
     def __init__(self,
                  simulation_time: int = SIMULATION_TIME,
                  random_seed_runtime: int = DEFAULT_RAND_SEED,
-                 log_directory: str = None,
+                 log_directory: Path = None,
                  tracepoints: tuple = (),
                  name: str = NAME,
                  core_config: dict = {},

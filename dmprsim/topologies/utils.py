@@ -94,7 +94,7 @@ def generate_routers(interfaces: list, mobility_models: list,
     routers = []
     for i, model in enumerate(mobility_models):
         ld = log_directory / 'routers' / str(i)
-        routers.append(Router(str(i), interfaces, model, str(ld),
+        routers.append(Router(str(i), interfaces, model, ld,
                               config_override, **router_args))
     for router in routers:
         router.register_routers(routers)

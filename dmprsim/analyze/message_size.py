@@ -10,8 +10,8 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 
-from dmprsim.analyze._utils.process_messages import process_files, \
-    ACTIONS as process_actions
+from dmprsim.analyze._utils.process_messages import ACTIONS as process_actions, \
+    process_files
 from dmprsim.scenarios.message_size import MessageSizeScenario
 
 configs = {

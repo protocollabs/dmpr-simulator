@@ -2,7 +2,6 @@ import functools
 import itertools
 import math
 import multiprocessing
-import os
 import pickle
 import random
 from pathlib import Path
@@ -57,13 +56,13 @@ class MessageSizeScenario(object):
             print("Need at least 16 GB")
 
         print("Starting low memory scenarios, ~2GB each")
-        self._apply(math.floor(ram/2), low_memory)
+        self._apply(math.floor(ram / 2), low_memory)
         print("Starting mid memory scenarios, ~4GB each")
-        self._apply(math.floor(ram/2), mid_memory)
+        self._apply(math.floor(ram / 2), mid_memory)
         print("Starting high memory scenarios, ~8GB each")
-        self._apply(math.floor(ram/2), high_memory)
+        self._apply(math.floor(ram / 2), high_memory)
         print("Starting very high memory scenarios, ~12GB each")
-        self._apply(math.floor(ram/2), very_high_memory)
+        self._apply(math.floor(ram / 2), very_high_memory)
 
         (self.log_directory / '.done').touch()
         print("Scenarios done")
@@ -132,7 +131,7 @@ class MessageSizeScenario(object):
         sim = GridTopology(
             simulation_time=simu_time,
             name=name,
-            log_directory=str(log_directory),
+            log_directory=log_directory,
             size=size,
             range_factor=math.sqrt(mesh),
             core_config={'max-full-update-interval': full_interval},
@@ -140,20 +139,9 @@ class MessageSizeScenario(object):
             router_args={'tracer': tracer},
             args=self.args,
         )
-        sim.quiet = not getattr(args, 'verbose', False)
+        sim.quiet = not getattr(self.args, 'verbose', False)
         sim.interfaces[0]['rx-loss'] = loss
         sim.prepare()
         for _ in sim.start():
             pass
         return data
-
-
-if __name__ == '__main__':
-    args = object()
-    s = MessageSizeScenario(args, Path.cwd(),
-                            sizes=(1, 2),
-                            meshes=(1, 2),
-                            losses=(0, 10),
-                            intervals=(0, 1, 2),
-                            )
-    s.start()

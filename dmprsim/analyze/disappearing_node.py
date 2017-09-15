@@ -2,11 +2,10 @@
 Draw a sequence diagram of all transmitted messages,
 requires rx.msg.valid tracepoint
 """
-import argparse
 import json
 from pathlib import Path
 
-from seqdiag import drawer, builder, parser as seq_parser
+from seqdiag import builder, drawer, parser as seq_parser
 
 from dmprsim.analyze._utils.extract_messages import all_tracefiles, \
     extract_messages
@@ -64,13 +63,3 @@ def main(args, result_path: Path, scenario_path: Path):
     draw = drawer.DiagramDraw(args.seq_diag_type, diagram, filename=filename)
     draw.draw()
     draw.save()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Generate sequence diagrams")
-    parser.add_argument('--format', default='SVG', choices=('SVG, PNG'),
-                        help='ouput format, default: SVG')
-    parser.add_argument('input', help='the scenario results directory')
-    parser.add_argument('output', help='the output filename')
-    args = parser.parse_args()
-    main(args.input, args.output, args.format)

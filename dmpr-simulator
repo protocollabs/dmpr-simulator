@@ -28,6 +28,7 @@ class AbstractAnalyzer(object):
     def _add_default_arguments(parser: argparse.ArgumentParser):
         parser.add_argument('--enable-video', action='store_true')
         parser.add_argument('--enable-images', action='store_true')
+        parser.add_argument('--simulate-forwarding', action='store_true')
         # Option to force quiet mode, default is set by scenario
         parser.add_argument('--quiet', action='store_const', const=True,
                             default=argparse.SUPPRESS)
