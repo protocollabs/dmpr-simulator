@@ -4,10 +4,13 @@ requires rx.msg.valid tracepoint
 """
 import argparse
 import json
+from pathlib import Path
 
 from seqdiag import drawer, builder, parser as seq_parser
 
-from dmprsim.analyze._utils.extract_messages import all_tracefiles, extract_messages
+from dmprsim.analyze._utils.extract_messages import all_tracefiles, \
+    extract_messages
+from dmprsim.scenarios.disappearing_node import main as scenario
 
 skel = """
    seqdiag {{
@@ -17,10 +20,14 @@ skel = """
 """
 
 
-def main(input, output, format):
+def main(args, result_path: Path, scenario_path: Path):
+    scenario(args, scenario_path, result_path)
+
+    if not args.sequence_diagram:
+        return
     routers = set()
     messages = {}
-    for router, tracefile in all_tracefiles(input, 'rx.msg.valid'):
+    for router, tracefile in all_tracefiles([scenario_path], 'rx.msg.valid'):
         routers.add(router)
         for time, message in extract_messages(tracefile):
             messages.setdefault(time, []).append((router, message))
@@ -52,7 +59,9 @@ def main(input, output, format):
 
     tree = seq_parser.parse_string(result)
     diagram = builder.ScreenNodeBuilder.build(tree)
-    draw = drawer.DiagramDraw(format, diagram, filename=output)
+    filename = str(result_path / 'sequence_diagram.svg')
+    result_path.mkdir(parents=True, exist_ok=True)
+    draw = drawer.DiagramDraw(args.seq_diag_type, diagram, filename=filename)
     draw.draw()
     draw.save()
 

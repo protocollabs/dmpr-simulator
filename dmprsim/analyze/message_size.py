@@ -3,6 +3,7 @@ Generate one plot per `chartgroup` with `xaxis` as the x-axis and message size
 as the y-axis
 """
 
+import shutil
 from pathlib import Path
 from typing import Union
 
@@ -20,8 +21,8 @@ configs = {
             1: "2 - 4 Neighbors",
             2: "3 - 8 Neighbors",
             4: "5 - 12 Neighbors",
-            5: "7 - 20 Neighbors",
-            8: "8 - 24 Neighbors",
+            # 5: "7 - 20 Neighbors",
+            # 8: "8 - 24 Neighbors",
         },
     },
     'loss': {
@@ -30,9 +31,9 @@ configs = {
             0: "0%",
             1: "1% loss",
             2: "2% loss",
-            5: "5% loss",
-            10: "10% loss",
-            20: "20% loss",
+            # 5: "5% loss",
+            # 10: "10% loss",
+            # 20: "20% loss",
         },
     },
     'size': {
@@ -43,14 +44,14 @@ configs = {
             2,
             3,
             4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            11,
-            13,
-            15,
+            # 5,
+            # 6,
+            # 7,
+            # 8,
+            # 9,
+            # 11,
+            # 13,
+            # 15,
         )},
     },
     'interval': {
@@ -60,14 +61,14 @@ configs = {
             0,
             1,
             2,
-            3,
-            4,
-            5,
-            7,
-            9,
-            11,
-            13,
-            15,
+            # 3,
+            # 4,
+            # 5,
+            # 7,
+            # 9,
+            # 11,
+            # 13,
+            # 15,
         )},
     },
 }
@@ -188,6 +189,7 @@ def main(args: object, result_path: Path, scenario_path: Path):
         run_scenario(args, scenario_path)
 
     print("Start plotting")
+    shutil.rmtree(str(result_path), ignore_errors=True)
     for chartgroup in PLOTS:
         for xaxis, conf in PLOTS[chartgroup]:
             compression = conf['compression']

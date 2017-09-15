@@ -54,12 +54,29 @@ class MessageSize(AbstractAnalyzer):
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
 
 
+class DisappearingNode(AbstractAnalyzer):
+    NUM = 2
+    NAME = '{:03}-disappearing-node'.format(NUM)
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        parser.add_argument('--sequence-diagram', action='store_true')
+        parser.add_argument('--seq-diag-type', default='SVG',
+                            choices=('SVG', 'PNG'))
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.disappearing_node import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=lambda args: parser.print_help())
     sub_parsers = parser.add_subparsers(title="Analyze options",
                                         description="valid analyze scripts")
     MessageSize.argparser(sub_parsers)
+    DisappearingNode.argparser(sub_parsers)
 
     args = parser.parse_args()
     args.func(args)

@@ -5,10 +5,9 @@ from typing import List, Tuple
 
 def all_tracefiles(input_dirs, tracepoint) -> tuple:
     for dir in input_dirs:
-        for router in os.listdir(os.path.join(dir, 'routers')):
-            tracefile = os.path.join(dir, 'routers', router, 'trace',
-                                     tracepoint)
-            yield router, tracefile
+        for router in (dir / 'routers').iterdir():
+            tracefile = router / 'trace' / tracepoint
+            yield router.name, tracefile
 
 
 def extract_messages(tracefile: Path) -> List[Tuple]:
