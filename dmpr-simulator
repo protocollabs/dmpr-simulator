@@ -12,37 +12,20 @@ RESULT_PATH = Path('results')
 SCENARIO_PATH = RESULT_PATH / '.scenarios'
 
 logger = logging.getLogger('dmprsim')
-
-# Ignore infos from core as they get too verbose
+logger.setLevel(logging.DEBUG)
 core_logger = logging.getLogger('dmprsim.core.dmpr')
-core_logger.setLevel(logging.WARNING)
+core_logger.setLevel(logging.DEBUG)
 
 
 class AbstractAnalyzer(object):
     NAME = 'abstract'
     NUM = 0
-    DEFAULT_ARGUMENTS = True
 
     @classmethod
     def argparser(cls, sub_parser: argparse._SubParsersAction):
-        parser = sub_parser.add_parser(cls.NAME, aliases=[str(cls.NUM)])
-        if cls.DEFAULT_ARGUMENTS:
-            cls._add_default_arguments(parser)
+        parser = sub_parser.add_parser(cls.NAME)  # , aliases=[str(cls.NUM)])
         cls.add_args(parser)
         parser.set_defaults(func=cls.start)
-
-    @staticmethod
-    def _add_default_arguments(parser: argparse.ArgumentParser):
-        parser.add_argument('--enable-video', action='store_true')
-        parser.add_argument('--enable-images', action='store_true')
-        parser.add_argument('--simulate-forwarding', action='store_true')
-        # Option to force quiet mode, default is set by scenario
-        parser.add_argument('--quiet', action='store_const', const=True,
-                            default=argparse.SUPPRESS)
-        parser.add_argument('--verbose', action='store_const', const=True,
-                            default=argparse.SUPPRESS)
-        parser.add_argument('--debug', action='store_const', const=True,
-                            default=argparse.SUPPRESS)
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -50,19 +33,41 @@ class AbstractAnalyzer(object):
 
     @classmethod
     def start(cls, args):
-        loglevel = logging.INFO
-        if getattr(args, 'quiet', False):
-            loglevel = logging.WARNING
-        elif getattr(args, 'verbose', False):
-            loglevel = logging.DEBUG
-        elif getattr(args, 'debug', False):
-            loglevel = logging.DEBUG
-            core_logger.setLevel(loglevel)
+        # Setup logging
 
-        logger.setLevel(loglevel)
-        handler = logging.StreamHandler()
-        handler.setLevel(loglevel)
-        logger.addHandler(handler)
+        # We want to split core and sim logs
+        core_logger.propagate = False
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        core_console_handler = logging.StreamHandler()
+        core_console_handler.setLevel(logging.WARNING)
+
+        file_handler = logging.FileHandler(
+            str(RESULT_PATH / cls.NAME / 'sim.log'))
+        file_handler.setLevel(logging.INFO)
+
+        core_file_handler = logging.FileHandler(
+            str(RESULT_PATH / cls.NAME / 'core.log'))
+        core_file_handler.setLevel(logging.INFO)
+
+        if args.debug:
+            console_handler.setLevel(logging.DEBUG)
+            core_console_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(logging.DEBUG)
+            core_file_handler.setLevel(logging.DEBUG)
+        elif args.verbose:
+            console_handler.setLevel(logging.INFO)
+        elif args.quiet:
+            console_handler.setLevel(logging.WARNING)
+
+        logger.addHandler(console_handler)
+        core_logger.addHandler(core_console_handler)
+
+        if not args.disable_logfile:
+            logger.addHandler(file_handler)
+            core_logger.addHandler(core_file_handler)
 
         cls.run(args)
 
@@ -116,6 +121,23 @@ class ProfileCore(AbstractAnalyzer):
 def main():
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=lambda args: parser.print_help())
+    parser.add_argument('--enable-video', action='store_true')
+    parser.add_argument('--enable-images', action='store_true')
+    parser.add_argument('--simulate-forwarding', action='store_true')
+
+    # Option for logging: quiet
+    logging_group = parser.add_argument_group(
+        'logging configuration',
+        'debug overrides verbose overrides quiet'
+    )
+    logging_group.add_argument('--quiet', action='store_true',
+                               default=argparse.SUPPRESS)
+    logging_group.add_argument('--verbose', action='store_true',
+                               default=argparse.SUPPRESS)
+    logging_group.add_argument('--debug', action='store_true',
+                               default=argparse.SUPPRESS)
+    logging_group.add_argument('--disable-logfile', action='store_true')
+
     sub_parsers = parser.add_subparsers(title="Analyze options",
                                         description="valid analyze scripts")
     MessageSize.argparser(sub_parsers)
