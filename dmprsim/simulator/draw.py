@@ -1,9 +1,12 @@
 import math
 import shutil
+from PIL import Image
 from pathlib import Path
 
-import cairo
-from PIL import Image
+try:
+    import cairo
+except ImportError:
+    import cairocffi as cairo
 
 
 def color_links_light(index):

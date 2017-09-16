@@ -8,7 +8,13 @@ import shutil
 from pathlib import Path
 from typing import Union
 
+import matplotlib
+
+matplotlib.use('AGG')
 import matplotlib.pyplot as plt
+
+matplotlib.style.use('ggplot')
+
 import numpy as np
 
 from dmprsim.analyze._utils.process_messages import ACTIONS as process_actions, \

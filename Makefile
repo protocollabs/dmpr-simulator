@@ -1,7 +1,5 @@
 PY=python3
-PYPY=$(which pypy3 || which python3)
 RUN_PY=$(PY) dmpr-simulator
-RUN_PYPY=$(PYPY) dmpr-simulator
 
 RESULTS=results
 SCENARIOS=results/.scenarios
@@ -27,7 +25,7 @@ fast:
 	$(RUN_PY) $(profile)
 
 slow:
-	$(RUN_PYPY) $(msg_size)
+	$(RUN_PY) $(msg_size)
 
 clean: clean_fast clean_slow
 
