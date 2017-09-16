@@ -12,8 +12,9 @@ RESULT_PATH = Path('results')
 SCENARIO_PATH = RESULT_PATH / '.scenarios'
 
 logger = logging.getLogger('dmprsim')
-core_logger = logging.getLogger('dmpr-core')
-core_logger.addHandler(logging.StreamHandler())
+
+# Ignore infos from core as they get too verbose
+core_logger = logging.getLogger('dmprsim.core.dmpr')
 core_logger.setLevel(logging.WARNING)
 
 
@@ -40,6 +41,8 @@ class AbstractAnalyzer(object):
                             default=argparse.SUPPRESS)
         parser.add_argument('--verbose', action='store_const', const=True,
                             default=argparse.SUPPRESS)
+        parser.add_argument('--debug', action='store_const', const=True,
+                            default=argparse.SUPPRESS)
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -47,12 +50,14 @@ class AbstractAnalyzer(object):
 
     @classmethod
     def start(cls, args):
+        loglevel = logging.INFO
         if getattr(args, 'quiet', False):
             loglevel = logging.WARNING
         elif getattr(args, 'verbose', False):
             loglevel = logging.DEBUG
-        else:
-            loglevel = logging.INFO
+        elif getattr(args, 'debug', False):
+            loglevel = logging.DEBUG
+            core_logger.setLevel(loglevel)
 
         logger.setLevel(loglevel)
         handler = logging.StreamHandler()
