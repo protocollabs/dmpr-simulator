@@ -19,14 +19,14 @@ skel = """
 """
 
 
-def main(args, result_path: Path, scenario_path: Path):
-    scenario(args, scenario_path, result_path)
+def main(args, results_dir: Path, scenario_dir: Path):
+    scenario(args, results_dir, scenario_dir)
 
     if not args.sequence_diagram:
         return
     routers = set()
     messages = {}
-    for router, tracefile in all_tracefiles([scenario_path], 'rx.msg.valid'):
+    for router, tracefile in all_tracefiles([scenario_dir], 'rx.msg.valid'):
         routers.add(router)
         for time, message in extract_messages(tracefile):
             messages.setdefault(time, []).append((router, message))
@@ -58,8 +58,8 @@ def main(args, result_path: Path, scenario_path: Path):
 
     tree = seq_parser.parse_string(result)
     diagram = builder.ScreenNodeBuilder.build(tree)
-    filename = str(result_path / 'sequence_diagram.svg')
-    result_path.mkdir(parents=True, exist_ok=True)
+    filename = str(results_dir / 'sequence_diagram.svg')
+    results_dir.mkdir(parents=True, exist_ok=True)
     draw = drawer.DiagramDraw(args.seq_diag_type, diagram, filename=filename)
     draw.draw()
     draw.save()

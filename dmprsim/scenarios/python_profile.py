@@ -6,7 +6,7 @@ from pathlib import Path
 from dmprsim.topologies.randomized import RandomTopology
 
 
-def main(args, log_directory: Path):
+def main(args, results_dir: Path, scenario_dir: Path):
     sim = RandomTopology(
         name='python_profile',
         simulation_time=50,
@@ -14,7 +14,8 @@ def main(args, log_directory: Path):
         area=(500, 500),
         velocity=lambda: 0.05,
         args=args,
-        log_directory=log_directory,
+        scenario_dir=scenario_dir,
+        results_dir=results_dir,
     )
     sim.prepare()
 

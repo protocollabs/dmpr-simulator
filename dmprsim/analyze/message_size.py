@@ -21,7 +21,7 @@ configs = {
         'datapoints': {
             1: "2 - 4 Neighbors",
             2: "3 - 8 Neighbors",
-            4: "5 - 12 Neighbors",
+            # 4: "5 - 12 Neighbors",
             # 5: "7 - 20 Neighbors",
             # 8: "8 - 24 Neighbors",
         },
@@ -31,7 +31,7 @@ configs = {
         'datapoints': {
             0: "0%",
             1: "1% loss",
-            2: "2% loss",
+            # 2: "2% loss",
             # 5: "5% loss",
             # 10: "10% loss",
             # 20: "20% loss",
@@ -44,7 +44,7 @@ configs = {
             1,
             2,
             3,
-            4,
+            # 4,
             # 5,
             # 6,
             # 7,
@@ -61,7 +61,7 @@ configs = {
             i: "Update interval {}".format(i) for i in (
             0,
             1,
-            2,
+            # 2,
             # 3,
             # 4,
             # 5,
@@ -168,10 +168,11 @@ def generate_plots(input: Path, output: Path, filename: str, chartgroup: str,
         plot(chartgroup, chartgroup_datapoint, xaxis, cumulated_data, output)
 
 
-def run_scenario(args: object, dir: Path):
+def run_scenario(args: object, results_dir: Path, scenario_dir: Path):
     scenario = MessageSizeScenario(
         args,
-        dir,
+        results_dir,
+        scenario_dir,
         sizes=configs['size']['datapoints'].keys(),
         meshes=configs['density']['datapoints'].keys(),
         losses=configs['loss']['datapoints'].keys(),
@@ -187,21 +188,21 @@ def process_messages(path: Path, compression):
                       process_actions[compression])
 
 
-def main(args: object, result_path: Path, scenario_path: Path):
-    if not (scenario_path / '.done').exists():
-        run_scenario(args, scenario_path)
+def main(args: object, results_dir: Path, scenario_dir: Path):
+    if not (scenario_dir / '.done').exists():
+        run_scenario(args, results_dir, scenario_dir)
 
     logger.info("Start plotting")
-    shutil.rmtree(str(result_path), ignore_errors=True)
+    shutil.rmtree(str(results_dir), ignore_errors=True)
     for chartgroup in PLOTS:
         for xaxis, conf in PLOTS[chartgroup]:
             compression = conf['compression']
             len_file = 'len-' + compression
-            done_file = scenario_path / ('.done-' + compression)
+            done_file = scenario_dir / ('.done-' + compression)
             if not done_file.exists():
-                process_messages(scenario_path, len_file)
+                process_messages(scenario_dir, len_file)
                 done_file.touch()
 
-            generate_plots(input=scenario_path, output=result_path,
+            generate_plots(input=scenario_dir, output=results_dir,
                            filename=len_file, chartgroup=chartgroup,
                            xaxis=xaxis, globs=conf)

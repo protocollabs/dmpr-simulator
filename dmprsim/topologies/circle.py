@@ -2,10 +2,6 @@ import math
 import random
 from pathlib import Path
 
-try:
-    from dmprsim.simulator import draw
-except ImportError:
-    draw = None
 from dmprsim.simulator.dmprsim import MobilityArea, MobilityModel
 from dmprsim.topologies.utils import GenericTopology
 
@@ -19,7 +15,8 @@ class CircleTopology(GenericTopology):
     def __init__(self,
                  simulation_time: int = SIMULATION_TIME,
                  random_seed_runtime: int = DEFAULT_RAND_SEED,
-                 log_directory: Path = None,
+                 scenario_dir: Path = None,
+                 results_dir: Path = None,
                  tracepoints: tuple = (),
                  name: str = NAME,
                  core_config: dict = {},
@@ -31,7 +28,8 @@ class CircleTopology(GenericTopology):
         super(CircleTopology, self).__init__(
             simulation_time=simulation_time,
             random_seed_runtime=random_seed_runtime,
-            log_directory=log_directory,
+            scenario_dir=scenario_dir,
+            results_dir=results_dir,
             tracepoints=tracepoints,
             name=name,
             core_config=core_config,
@@ -50,9 +48,9 @@ class CircleTopology(GenericTopology):
         self.area = None
 
     def prepare(self):
+        super(CircleTopology, self).prepare()
+
         random.seed(self.random_seed_prep)
-        if self.gen_images and draw:
-            draw.setup_img_folder(self.log_directory)
 
         # Set all models on a circle
         padding = 50

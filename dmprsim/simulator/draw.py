@@ -146,9 +146,8 @@ def draw_router_loc(args, ld: Path, area, r, img_idx):
         path_thickness = 6.0
         # iterate over links
         interfaces_idx = 0
-        for i, t in enumerate(router.interfaces):
-            range_ = t['range']
-            interface_name = t['name']
+        for i, interface_name in enumerate(router.interfaces):
+            range_ = router.interfaces[interface_name]['range']
             ctx.set_source_rgba(*color_range(args, i))
             ctx.move_to(x, y)
             ctx.arc(x, y, range_, 0, 2 * math.pi)
@@ -248,7 +247,7 @@ def draw_router_loc(args, ld: Path, area, r, img_idx):
         ctx.set_antialias(True)
 
     full_path = ld / "images-range" / "{0:05}.png".format(img_idx)
-    surface.write_to_png(full_path)
+    surface.write_to_png(str(full_path))
 
 
 def color_transmission_circle_light():
@@ -295,7 +294,9 @@ def draw_router_transmission(args, ld: Path, area, r, img_idx):
         x, y = router.coordinates()
 
         if router.transmission_within_second:
-            distance = max(router.interfaces, key=lambda x: x['range'])['range']
+            distance = \
+                max(router.interfaces.values(), key=lambda x: x['range'])[
+                    'range']
             ctx.set_source_rgba(*color_transmission_circle(args))
             ctx.move_to(x, y)
             ctx.arc(x, y, distance, 0, 2 * math.pi)
@@ -309,9 +310,8 @@ def draw_router_transmission(args, ld: Path, area, r, img_idx):
         ctx.set_line_width(0.1)
         path_thickness = 6.0
         # iterate over links
-        for i, t in enumerate(router.interfaces):
-            range_ = t['range']
-            interface_name = t['name']
+        for i, interface_name in enumerate(router.interfaces):
+            range_ = router.interfaces[interface_name]['range']
 
             # draw lines between links
             ctx.set_line_width(path_thickness)
@@ -340,13 +340,13 @@ def draw_router_transmission(args, ld: Path, area, r, img_idx):
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
-    full_path = ld / "images-tx", "{0:05}.png".format(img_idx)
-    surface.write_to_png(full_path)
+    full_path = ld / "images-tx" / "{0:05}.png".format(img_idx)
+    surface.write_to_png(str(full_path))
 
 
 def image_merge(ld: Path, img_idx: int):
     m_path = ld / "images-range-tx-merge" / "{0:05}.png".format(img_idx)
-    r_path = ld / "images-range", "{0:05}.png".format(img_idx)
+    r_path = ld / "images-range" / "{0:05}.png".format(img_idx)
     t_path = ld / "images-tx" / "{0:05}.png".format(img_idx)
 
     images = map(Image.open, [r_path, t_path])

@@ -16,7 +16,8 @@ class GenericTopology:
     def __init__(self,
                  simulation_time: int = 100,
                  random_seed_runtime: int = 1,
-                 log_directory: Path = None,
+                 scenario_dir: Path = None,
+                 results_dir: Path = None,
                  tracepoints: tuple = (),
                  name: str = 'generic',
                  core_config: dict = {},
@@ -25,7 +26,8 @@ class GenericTopology:
                  ):
         self.random_seed_runtime = random_seed_runtime
         self.simulation_time = simulation_time
-        self.log_directory = log_directory
+        self.scenario_dir = scenario_dir
+        self.results_dir = results_dir
         self.tracepoints = tracepoints
         self.name = name
         self.config_override = core_config
@@ -39,14 +41,22 @@ class GenericTopology:
         if self.gen_movie and not self.gen_images:
             self.gen_images = True
 
-        if log_directory is None:
-            self.log_directory = Path.cwd() / 'run-data' / self.name
-            self.log_directory.mkdir(parents=True, exist_ok=True)
+        if scenario_dir is None:
+            self.scenario_dir = Path.cwd() / 'run-data' / self.name
+        self.scenario_dir.mkdir(parents=True, exist_ok=True)
+
+        if results_dir is None:
+            self.results_dir = Path.cwd() / 'results' / self.name
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
         self.tx_router = None
         self.rx_ip = None
         self.area = None
         self.routers = []
+
+    def prepare(self):
+        if self.gen_images and draw:
+            draw.setup_img_folder(self.results_dir)
 
     def start(self):
         for tracepoint in self.tracepoints:
@@ -77,18 +87,15 @@ class GenericTopology:
             class args:
                 color_scheme = 'light'
 
-            draw.draw_images(args, self.log_directory, self.area, self.routers,
-                             sec)
+            draw.draw_images(args, self.results_dir, self.area,
+                             self.routers, sec)
 
     def _generate_routers(self, models):
         return generate_routers(interfaces=self.interfaces,
-                                log_directory=self.log_directory,
+                                log_directory=self.scenario_dir,
                                 config_override=self.config_override,
                                 mobility_models=models,
                                 router_args=self.router_args)
-
-    def prepare(self):
-        raise NotImplementedError("A scenario needs a prepare method")
 
 
 def generate_routers(interfaces: list, mobility_models: list,

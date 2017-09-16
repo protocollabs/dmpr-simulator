@@ -15,11 +15,12 @@ CONFIG = {
 }
 
 
-def main(args, scenario_path: Path, result_path: Path):
+def main(args, results_dir: Path, scenario_dir: Path):
     simulation = CircleTopology(
         simulation_time=SIMULATION_TIME,
         tracepoints=('tx.msg',),
-        log_directory=scenario_path,
+        scenario_dir=scenario_dir,
+        results_dir=results_dir,
         num_routers=8,
         core_config=CONFIG,
         args=args,
@@ -40,7 +41,7 @@ def main(args, scenario_path: Path, result_path: Path):
             routers[1].mm.visible = True
 
     if simulation.gen_movie:
-        ffmpeg(result_path)
+        ffmpeg(results_dir)
 
 
 if __name__ == '__main__':

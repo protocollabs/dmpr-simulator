@@ -4,6 +4,7 @@ RUN_PY=$(PY) dmpr-simulator
 RUN_PYPY=$(PYPY) dmpr-simulator
 
 RESULTS=results
+SCENARIOS=results/.scenarios
 
 msg_size=001-message-size
 dis_node=002-disappearing-node
@@ -32,9 +33,12 @@ clean: clean_fast clean_slow
 
 clean_fast:
 	rm -r $(RESULTS)/$(dis_node)
+	rm -r $(SCENARIOS)/$(dis_node)
 	rm -r $(RESULTS)/$(profile)
+	rm -r $(SCENARIOS)/$(profile)
 
 clean_slow:
 	rm -r $(RESULTS)/$(msg_size)
+	rm -r $(SCENARIOS)/$(msg_size)
 
 .PHONY: help all fast slow clean clean_fast clean_slow

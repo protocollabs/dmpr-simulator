@@ -34,11 +34,12 @@ class FilterTracer(dmprsim.Tracer):
 
 
 class MessageSizeScenario(object):
-    def __init__(self, args: object, dir: Path, sizes, meshes, losses,
-                 intervals):
+    def __init__(self, args: object, results_dir: Path, scenario_dir: Path,
+                 sizes, meshes, losses, intervals):
         self.args = args
-        self.log_directory = dir
-        self.checkpoint_file = self.log_directory / CHECKPOINT_FILE
+        self.scenario_dir = scenario_dir
+        self.results_dir = results_dir
+        self.checkpoint_file = self.scenario_dir / CHECKPOINT_FILE
 
         self.combinations = set(
             itertools.product(sizes, meshes, losses, intervals))
@@ -68,7 +69,7 @@ class MessageSizeScenario(object):
         logger.info("Starting very high memory scenarios, ~12GB each")
         self._apply(math.floor(ram / 2), very_high_memory)
 
-        (self.log_directory / '.done').touch()
+        (self.scenario_dir / '.done').touch()
         logger.info("Scenarios done")
 
     def _save_checkpoint(self, data):
@@ -109,7 +110,8 @@ class MessageSizeScenario(object):
     def _run(self, data):
         size, mesh, loss, full_interval = data
         name = '{}-{}-{}-{}'.format(*data)
-        log_directory = self.log_directory / name
+        scenario_dir = self.scenario_dir / name
+        results_dir = self.results_dir / name
         mesh = math.sqrt(mesh)
         loss /= 100
 
@@ -135,7 +137,8 @@ class MessageSizeScenario(object):
         sim = GridTopology(
             simulation_time=simu_time,
             name=name,
-            log_directory=log_directory,
+            scenario_dir=scenario_dir,
+            results_dir=results_dir,
             size=size,
             range_factor=math.sqrt(mesh),
             core_config={'max-full-update-interval': full_interval},
