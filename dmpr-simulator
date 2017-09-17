@@ -13,17 +13,22 @@ SCENARIO_PATH = RESULT_PATH / '.scenarios'
 
 logger = logging.getLogger('dmprsim')
 logger.setLevel(logging.DEBUG)
-core_logger = logging.getLogger('dmprsim.core.dmpr')
+core_logger = logging.getLogger('core')
 core_logger.setLevel(logging.DEBUG)
 
 
 class AbstractAnalyzer(object):
     NAME = 'abstract'
     NUM = 0
+    HELP = ''
 
     @classmethod
-    def argparser(cls, sub_parser: argparse._SubParsersAction):
-        parser = sub_parser.add_parser(cls.NAME)  # , aliases=[str(cls.NUM)])
+    def argparser(cls, sub_parser: argparse._SubParsersAction,
+                  optionals: argparse.ArgumentParser):
+        parser = sub_parser.add_parser(cls.NAME,
+                                       parents=[optionals],
+                                       aliases=[str(cls.NUM)],
+                                       help=cls.HELP)
         cls.add_args(parser)
         parser.set_defaults(func=cls.start)
 
@@ -36,13 +41,14 @@ class AbstractAnalyzer(object):
         # Setup logging
 
         # We want to split core and sim logs
-        core_logger.propagate = False
-
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
 
         core_console_handler = logging.StreamHandler()
         core_console_handler.setLevel(logging.WARNING)
+
+        (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+        (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
 
         file_handler = logging.FileHandler(
             str(RESULT_PATH / cls.NAME / 'sim.log'))
@@ -65,7 +71,7 @@ class AbstractAnalyzer(object):
         logger.addHandler(console_handler)
         core_logger.addHandler(core_console_handler)
 
-        if not args.disable_logfile:
+        if not args.disable_logfiles:
             logger.addHandler(file_handler)
             core_logger.addHandler(core_file_handler)
 
@@ -119,30 +125,33 @@ class ProfileCore(AbstractAnalyzer):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.set_defaults(func=lambda args: parser.print_help())
-    parser.add_argument('--enable-video', action='store_true')
-    parser.add_argument('--enable-images', action='store_true')
-    parser.add_argument('--simulate-forwarding', action='store_true')
-
-    # Option for logging: quiet
-    logging_group = parser.add_argument_group(
+    # Use a centralised parser for all optional arguments and add it to
+    # the main and _all_ subparsers so that arguments can be set before or
+    # after the subparser keyword
+    optional_parser = argparse.ArgumentParser(add_help=False)
+    logging_group = optional_parser.add_argument_group(
         'logging configuration',
         'debug overrides verbose overrides quiet'
     )
-    logging_group.add_argument('--quiet', action='store_true',
-                               default=argparse.SUPPRESS)
-    logging_group.add_argument('--verbose', action='store_true',
-                               default=argparse.SUPPRESS)
-    logging_group.add_argument('--debug', action='store_true',
-                               default=argparse.SUPPRESS)
-    logging_group.add_argument('--disable-logfile', action='store_true')
+    logging_group.add_argument('--quiet', action='store_true')
+    logging_group.add_argument('--verbose', action='store_true')
+    logging_group.add_argument('--debug', action='store_true')
+    logging_group.add_argument('--disable-logfiles', action='store_true')
+    optional_parser.add_argument('--enable-video', action='store_true')
+    optional_parser.add_argument('--enable-images', action='store_true')
+    optional_parser.add_argument('--simulate-forwarding', action='store_true')
+
+    parser = argparse.ArgumentParser(parents=[optional_parser])
+    parser.set_defaults(func=lambda args: parser.print_help())
 
     sub_parsers = parser.add_subparsers(title="Analyze options",
-                                        description="valid analyze scripts")
-    MessageSize.argparser(sub_parsers)
-    DisappearingNode.argparser(sub_parsers)
-    ProfileCore.argparser(sub_parsers)
+                                        description="valid analyze scripts",
+                                        metavar='')
+
+    # A bit of magic to register all analyze scripts
+    scripts = sorted(AbstractAnalyzer.__subclasses__(), key=lambda x: x.NAME)
+    for script in scripts:
+        script.argparser(sub_parsers, optional_parser)
 
     args = parser.parse_args()
     args.func(args)

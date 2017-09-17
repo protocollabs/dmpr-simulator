@@ -109,11 +109,13 @@ def accumulate(input: Path, globs: dict, filename: str,
         try:
             with file.open() as fin:
                 message_lengths += fin.read()
-        except FileNotFoundError:
-            pass
+        except FileNotFoundError as e:
+            logger.debug("Could not find file, skipping {}".format(e))
+            continue
 
     sizes = np.asarray([int(i) for i in message_lengths.splitlines() if i])
     if len(sizes) == 0:
+        logger.debug("File lengths of {} is zero, skipping".format(files))
         return False
 
     return (xaxis_datapoint, np.min(sizes), np.percentile(sizes, 25),
@@ -169,6 +171,9 @@ def generate_plots(input: Path, output: Path, filename: str, chartgroup: str,
             cumulated_data.append(data)
 
         if not cumulated_data:
+            logger.debug(
+                "no data for {}-{}, skippint".format(chartgroup_datapoint,
+                                                     xaxis))
             continue
 
         plot(chartgroup, chartgroup_datapoint, xaxis, cumulated_data, output)
@@ -199,7 +204,6 @@ def main(args: object, results_dir: Path, scenario_dir: Path):
         run_scenario(args, results_dir, scenario_dir)
 
     logger.info("Start plotting")
-    shutil.rmtree(str(results_dir), ignore_errors=True)
     for chartgroup in PLOTS:
         for xaxis, conf in PLOTS[chartgroup]:
             compression = conf['compression']
@@ -208,7 +212,6 @@ def main(args: object, results_dir: Path, scenario_dir: Path):
             if not done_file.exists():
                 process_messages(scenario_dir, len_file)
                 done_file.touch()
-
             generate_plots(input=scenario_dir, output=results_dir,
                            filename=len_file, chartgroup=chartgroup,
-                           xaxis=xaxis, globs=conf)
+                           xaxis=xaxis, globs=conf.copy())

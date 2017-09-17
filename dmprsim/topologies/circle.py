@@ -2,7 +2,7 @@ import math
 import random
 from pathlib import Path
 
-from dmprsim.simulator.dmprsim import MobilityArea, MobilityModel
+from dmprsim.simulator import MobilityArea, MobilityModel
 from dmprsim.topologies.utils import GenericTopology
 
 

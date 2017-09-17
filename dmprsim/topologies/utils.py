@@ -7,7 +7,7 @@ try:
     from dmprsim.simulator import draw
 except ImportError:
     draw = None
-from dmprsim.simulator.dmprsim import Router, gen_data_packet
+from dmprsim.simulator import Router, gen_data_packet
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,6 @@ class GenericTopology:
             self.scenario_dir = Path.cwd() / 'run-data' / self.name
         self.scenario_dir.mkdir(parents=True, exist_ok=True)
 
-        if results_dir is None:
-            self.results_dir = Path.cwd() / 'results' / self.name
-        self.results_dir.mkdir(parents=True, exist_ok=True)
-
         self.tx_router = None
         self.rx_ip = None
         self.area = None
@@ -56,7 +52,7 @@ class GenericTopology:
 
     def prepare(self):
         if self.gen_images and draw:
-            draw.setup_img_folder(self.results_dir)
+            draw.setup_img_folder(self.scenario_dir)
 
     def start(self):
         for tracepoint in self.tracepoints:
@@ -87,7 +83,7 @@ class GenericTopology:
             class args:
                 color_scheme = 'light'
 
-            draw.draw_images(args, self.results_dir, self.area,
+            draw.draw_images(args, self.scenario_dir, self.area,
                              self.routers, sec)
 
     def _generate_routers(self, models):

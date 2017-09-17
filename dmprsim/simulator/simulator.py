@@ -7,9 +7,8 @@ import math
 import pathlib
 import random
 
-from ..core.dmpr import NoOpTracer, SimpleBandwidthPolicy, SimpleLossPolicy, \
-    dmpr
-from ..core.dmpr.path import Path
+from core.dmpr import NoOpTracer, SimpleBandwidthPolicy, SimpleLossPolicy, dmpr
+from core.dmpr.path import Path
 
 DEFAULT_PACKET_TTL = 32
 
@@ -78,15 +77,16 @@ class Tracer(NoOpTracer):
 
 
 class Router:
-    def __init__(self, id_, interfaces: list, mm,
-                 log_directory: pathlib.Path, override_config={}, policies=None,
-                 tracer=None):
+    def __init__(self, id_, interfaces: list, mm, log_directory: pathlib.Path,
+                 override_config={}, policies=None, tracer=None):
         self.id = id_
 
         tracer_dir = log_directory / 'trace'
         if tracer is None:
             tracer = Tracer
         self.tracer = tracer(tracer_dir)
+
+        self.log = logger.getChild(str(self.id))
 
         self.log_directory = log_directory
         self.mm = mm
@@ -198,13 +198,13 @@ class Router:
         """ this function is called when core stated
         that the routing table should be updated
         """
-        logger.debug("routing table update")
+        self.log.debug("routing table update")
         self.routing_table = routing_table
 
     def _route_lookup(self, packet):
         tos = packet['tos']  # e.g. "lowest-loss"
         if not tos in self.routing_table:
-            logger.info("no policy routing table named: {}".format(tos))
+            self.log.info("no policy routing table named: {}".format(tos))
             raise ForwardException("wrong tos")
 
         dst_prefix = packet['dst-prefix']
@@ -234,12 +234,13 @@ class Router:
 
     def forward_packet(self, packet):
         if packet['ttl'] <= 0:
-            logger.info('drop packet, ttl 0')
+            self.log.info('drop packet, ttl 0')
             return
 
         if self._data_packet_reached_dst(packet):
             hops = DEFAULT_PACKET_TTL - packet['ttl']
-            logger.info("packet reached destination with {} hops".format(hops))
+            self.log.info(
+                "packet reached destination with {} hops".format(hops))
             return
 
         packet['ttl'] -= 1
@@ -248,13 +249,14 @@ class Router:
         try:
             router = self._route_lookup(packet)
         except ForwardException as e:
-            logger.info(
+            self.log.info(
                 "route lookup failed, drop packet, no next hop\n{}".format(e))
-            logger.info(packet['path'])
+            self.log.info(packet['path'])
             return
 
-        logger.info("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'],
-                                                            self.id, router.id))
+        self.log.info("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'],
+                                                              self.id,
+                                                              router.id))
         self.forwarded_packets.append([packet['tos'], self, router])
         router.forward_packet(packet)
 
@@ -266,7 +268,7 @@ class Router:
         msg_json = json.dumps(msg)
 
         emsg = "msg transmission [interface:{}, proto:{}, addr:{}]"
-        logger.debug(emsg.format(interface_name, proto, dst_mcast_addr))
+        self.log.debug(emsg.format(interface_name, proto, dst_mcast_addr))
         # send message to all connected routers
         for r_obj in self.connections[interface_name].values():
             r_obj.msg_rx(interface_name, msg_json)

@@ -1,5 +1,6 @@
 PY=python3
 RUN_PY=$(PY) dmpr-simulator
+RM=rm -rf
 
 RESULTS=results
 SCENARIOS=results/.scenarios
@@ -25,18 +26,18 @@ fast:
 	$(RUN_PY) $(profile)
 
 slow:
-	$(RUN_PY) $(msg_size)
+	$(RUN_PY) $(msg_size) --disable-logfiles
 
 clean: clean_fast clean_slow
 
 clean_fast:
-	rm -r $(RESULTS)/$(dis_node)
-	rm -r $(SCENARIOS)/$(dis_node)
-	rm -r $(RESULTS)/$(profile)
-	rm -r $(SCENARIOS)/$(profile)
+	$(RM) $(RESULTS)/$(dis_node)
+	$(RM) $(SCENARIOS)/$(dis_node)
+	$(RM) $(RESULTS)/$(profile)
+	$(RM) $(SCENARIOS)/$(profile)
 
 clean_slow:
-	rm -r $(RESULTS)/$(msg_size)
-	rm -r $(SCENARIOS)/$(msg_size)
+	$(RM) $(RESULTS)/$(msg_size)
+	$(RM) $(SCENARIOS)/$(msg_size)
 
 .PHONY: help all fast slow clean clean_fast clean_slow

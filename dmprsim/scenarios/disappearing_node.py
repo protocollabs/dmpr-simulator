@@ -18,7 +18,7 @@ CONFIG = {
 def main(args, results_dir: Path, scenario_dir: Path):
     simulation = CircleTopology(
         simulation_time=SIMULATION_TIME,
-        tracepoints=('tx.msg',),
+        tracepoints=('rx.msg.valid',),
         scenario_dir=scenario_dir,
         results_dir=results_dir,
         num_routers=8,

@@ -7,9 +7,9 @@ import pickle
 import random
 from pathlib import Path
 
-from dmprsim.simulator import dmprsim
+import dmprsim.simulator
 from dmprsim.topologies.grid import GridTopology
-from ..core.dmpr.config import DefaultConfiguration as DMPRDefaultConfiguration
+from core.dmpr.config import DefaultConfiguration as DMPRDefaultConfiguration
 
 CHECKPOINT_FILE = '.message_sizes.checkpoint'
 
@@ -22,7 +22,7 @@ SETTLING_TIME_BUFFER = 100
 logger = logging.getLogger(__name__)
 
 
-class FilterTracer(dmprsim.Tracer):
+class FilterTracer(dmprsim.simulator.Tracer):
     def __init__(self, *args, **kwargs):
         self.min_time = kwargs.pop('min_time', float('-inf'))
         super(FilterTracer, self).__init__(*args, **kwargs)
