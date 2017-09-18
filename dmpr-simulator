@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+import argparse
+import logging
+from pathlib import Path
+
+DESCRIPTION = """\
+The dmpr-simulator, choose one of the scenarios listed below, results are
+generated in the results/ subdirectory
+"""
+
+RESULT_PATH = Path('results')
+SCENARIO_PATH = RESULT_PATH / '.scenarios'
+
+logger = logging.getLogger('dmprsim')
+logger.setLevel(logging.DEBUG)
+core_logger = logging.getLogger('core')
+core_logger.setLevel(logging.DEBUG)
+
+
+class AbstractAnalyzer(object):
+    NAME = 'abstract'
+    NUM = 0
+    HELP = ''
+
+    @classmethod
+    def argparser(cls, sub_parser: argparse._SubParsersAction,
+                  optionals: argparse.ArgumentParser):
+        parser = sub_parser.add_parser(cls.NAME,
+                                       parents=[optionals],
+                                       aliases=[str(cls.NUM)],
+                                       help=cls.HELP)
+        cls.add_args(parser)
+        parser.set_defaults(func=cls.start)
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        pass
+
+    @classmethod
+    def start(cls, args):
+        # Setup logging
+
+        # We want to split core and sim logs
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        core_console_handler = logging.StreamHandler()
+        core_console_handler.setLevel(logging.WARNING)
+
+        (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+        (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+
+        file_handler = logging.FileHandler(
+            str(RESULT_PATH / cls.NAME / 'sim.log'))
+        file_handler.setLevel(logging.INFO)
+
+        core_file_handler = logging.FileHandler(
+            str(RESULT_PATH / cls.NAME / 'core.log'))
+        core_file_handler.setLevel(logging.INFO)
+
+        if args.debug:
+            console_handler.setLevel(logging.DEBUG)
+            core_console_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(logging.DEBUG)
+            core_file_handler.setLevel(logging.DEBUG)
+        elif args.verbose:
+            console_handler.setLevel(logging.INFO)
+        elif args.quiet:
+            console_handler.setLevel(logging.WARNING)
+
+        logger.addHandler(console_handler)
+        core_logger.addHandler(core_console_handler)
+
+        if not args.disable_logfiles:
+            logger.addHandler(file_handler)
+            core_logger.addHandler(core_file_handler)
+
+        cls.run(args)
+
+    @classmethod
+    def run(cls, args):
+        raise NotImplementedError
+
+
+class MessageSize(AbstractAnalyzer):
+    NUM = 1
+    NAME = '{:03}-message-size'.format(NUM)
+    HELP = 'Run a huge combination of parameters of a grid topology and ' \
+           'generate some plots to see the resulting routing-message sizes'
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        parser.add_argument('--max-ram', default=16, type=int,
+                            help='Maximum RAM in GB')
+
+    @classmethod
+    def run(cls, args):
+        # Set default loglevel for this simulation to warning
+        from dmprsim.analyze.message_size import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
+class DisappearingNode(AbstractAnalyzer):
+    NUM = 2
+    NAME = '{:03}-disappearing-node'.format(NUM)
+    HELP = 'Run a circle topology, remove a node after 300 seconds and re-add' \
+           ' it after another 600 seconds, this scenario can plot a sequence' \
+           'diagram of the transmitted messages'
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        parser.add_argument('--sequence-diagram', action='store_true')
+        parser.add_argument('--seq-diag-type', default='SVG',
+                            choices=('SVG', 'PNG'))
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.disappearing_node import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
+class ProfileCore(AbstractAnalyzer):
+    NUM = 3
+    NAME = '{:03}-profile-core'.format(NUM)
+    HELP = 'runs a small scenario of randomly distributed nodes and uses ' \
+           'cProfile to profile the simulator and the core'
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.profile_core import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
+def main():
+    # Use a centralised parser for all optional arguments and add it to
+    # the main and _all_ subparsers so that arguments can be set before or
+    # after the subparser keyword
+    optional_parser = argparse.ArgumentParser(add_help=False)
+    logging_group = optional_parser.add_argument_group(
+        'logging configuration',
+        'debug overrides verbose overrides quiet'
+    )
+    logging_group.add_argument('--quiet', action='store_true')
+    logging_group.add_argument('--verbose', action='store_true')
+    logging_group.add_argument('--debug', action='store_true')
+    logging_group.add_argument('--disable-logfiles', action='store_true')
+    optional_parser.add_argument('--enable-video', action='store_true')
+    optional_parser.add_argument('--enable-images', action='store_true')
+    optional_parser.add_argument('--simulate-forwarding', action='store_true')
+
+    parser = argparse.ArgumentParser(parents=[optional_parser])
+    parser.set_defaults(func=lambda args: parser.print_help())
+
+    sub_parsers = parser.add_subparsers(title="Analyze options",
+                                        description="valid analyze scripts",
+                                        metavar='')
+
+    # A bit of magic to register all analyze scripts
+    scripts = sorted(AbstractAnalyzer.__subclasses__(), key=lambda x: x.NAME)
+    for script in scripts:
+        script.argparser(sub_parsers, optional_parser)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == '__main__':
+    main()

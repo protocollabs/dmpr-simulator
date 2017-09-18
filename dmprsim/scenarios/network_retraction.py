@@ -1,7 +1,7 @@
-import os
+from pathlib import Path
 
-from topologies.circle import CircleTopology
-from topologies.utils import ffmpeg
+from dmprsim.topologies.circle import CircleTopology
+from dmprsim.topologies.utils import ffmpeg
 
 SIMULATION_TIME = 500
 NAME = 'circle_with_removing'
@@ -11,7 +11,6 @@ simulation = CircleTopology(
     tracepoints=('tx.msg',),
     name=NAME,
     num_routers=8,
-    simulate_forwarding=False
 )
 routers = simulation.prepare()
 
@@ -25,6 +24,5 @@ for sec in simulation.start():
     if sec == 150:
         routers[1].mm.visible = False
 
-dest_dir = os.path.join(os.getcwd(), 'run-data', NAME)
-print("generating movie in {}".format(dest_dir))
+dest_dir = Path.cwd() / 'run-data' / NAME
 ffmpeg(dest_dir)

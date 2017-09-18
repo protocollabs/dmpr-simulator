@@ -4,3 +4,4 @@ run-data
 __pycache__
 *.pyc
 /.idea
+/results

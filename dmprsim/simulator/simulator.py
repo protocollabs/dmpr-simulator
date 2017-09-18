@@ -2,62 +2,63 @@
 
 import ipaddress
 import json
+import logging
 import math
-import os
+import pathlib
 import random
-import shutil
-from datetime import datetime
 
-import core.dmpr
-import core.dmpr.path
+from core.dmpr import NoOpTracer, SimpleBandwidthPolicy, SimpleLossPolicy, dmpr
+from core.dmpr.path import Path
 
 DEFAULT_PACKET_TTL = 32
+
+logger = logging.getLogger(__name__)
 
 
 class ForwardException(Exception):
     pass
 
 
-class LoggerClone(core.dmpr.NoOpLogger):
-    def __init__(self, directory, id_, loglevel=core.dmpr.NoOpLogger.INFO):
-        super(LoggerClone, self).__init__(loglevel)
+class TimeWrapper(object):
+    time = 0
 
-        try:
-            filename = '{0:05}.log'.format(int(id_))
-        except ValueError:
-            filename = '{}.log'.format(id_)
+    @classmethod
+    def step(cls):
+        cls.time += 1
 
-        os.makedirs(directory, exist_ok=True)
-        self._log_fd = open(os.path.join(directory, filename), 'w')
 
-    def log(self, msg, sev, time=lambda: datetime.now().isoformat()):
-        if sev < self.loglevel:
-            pass
-        msg = "{} {}\n".format(time, msg)
-        self._log_fd.write(msg)
+def patch_log_record_factory():
+    default_record_factory = logging.getLogRecordFactory()
+
+    def patch_time_factory(*args, **kwargs):
+        record = default_record_factory(*args, **kwargs)
+        record.created = TimeWrapper.time
+        return record
+
+    logging.setLogRecordFactory(patch_time_factory())
 
 
 class JSONPathEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, core.dmpr.path.Path):
+        if isinstance(o, Path):
             return '>'.join(o.nodes)
         return json.JSONEncoder.default(self, o)
 
 
-class Tracer(core.dmpr.NoOpTracer):
-    def __init__(self, directory, enable: list = None):
+class Tracer(NoOpTracer):
+    def __init__(self, directory: pathlib.Path, enable: list = None):
         self.enabled = {}
         if enable is not None:
             for tracer in enable:
                 self.enable(tracer)
 
-        os.makedirs(directory, exist_ok=True)
+        directory.mkdir(parents=True, exist_ok=True)
         self.directory = directory
 
     def enable(self, tracepoint):
         if tracepoint not in self.enabled:
-            path = os.path.join(self.directory, tracepoint)
-            self.enabled[tracepoint] = open(path, 'w')
+            path = self.directory / tracepoint
+            self.enabled[tracepoint] = path.open('w')
 
     def get_files(self, tracepoint: str) -> list:
         result = []
@@ -76,15 +77,16 @@ class Tracer(core.dmpr.NoOpTracer):
 
 
 class Router:
-    def __init__(self, id_, interfaces: list, mm,
-                 log_directory: str, override_config={}, policies=None):
+    def __init__(self, id_, interfaces: list, mm, log_directory: pathlib.Path,
+                 override_config={}, policies=None, tracer=None):
         self.id = id_
 
-        logger_dir = os.path.join(log_directory, "logs")
-        self.log = LoggerClone(logger_dir, id_)
+        tracer_dir = log_directory / 'trace'
+        if tracer is None:
+            tracer = Tracer
+        self.tracer = tracer(tracer_dir)
 
-        tracer_dir = os.path.join(log_directory, "trace")
-        self.tracer = Tracer(tracer_dir)
+        self.log = logger.getChild(str(self.id))
 
         self.log_directory = log_directory
         self.mm = mm
@@ -96,7 +98,6 @@ class Router:
         self.interface_addr = {}
         self.is_transmitter = False
         self.is_receiver = False
-        self.time = 0
         self.routers = []
         self.transmission_within_second = False
         self.forwarded_packets = list()
@@ -105,8 +106,8 @@ class Router:
 
         self.policies = policies
         if policies is None:
-            self.policies = (core.dmpr.SimpleBandwidthPolicy(),
-                             core.dmpr.SimpleLossPolicy())
+            self.policies = (SimpleBandwidthPolicy(),
+                             SimpleLossPolicy())
 
         for interface in interfaces:
             self.connections[interface['name']] = dict()
@@ -119,7 +120,7 @@ class Router:
         self._setup_core()
 
     def _setup_core(self):
-        self._core = core.dmpr.DMPR(log=self.log, tracer=self.tracer)
+        self._core = dmpr.DMPR(tracer=self.tracer)
 
         self._core.register_routing_table_update_cb(
             self.routing_table_update_cb)
@@ -183,8 +184,8 @@ class Router:
         return c
 
     def _dump_config(self, config):
-        filename = os.path.join(self.log_directory, 'config')
-        with open(filename, 'w') as file:
+        filename = self.log_directory / 'config'
+        with filename.open('w') as file:
             file.write(json.dumps(config, sort_keys=True,
                                   indent=4, separators=(',', ': ')))
 
@@ -197,13 +198,13 @@ class Router:
         """ this function is called when core stated
         that the routing table should be updated
         """
-        self.log.info("routing table update")
+        self.log.debug("routing table update")
         self.routing_table = routing_table
 
     def _route_lookup(self, packet):
         tos = packet['tos']  # e.g. "lowest-loss"
         if not tos in self.routing_table:
-            print("no policy routing table named: {}".format(tos))
+            self.log.info("no policy routing table named: {}".format(tos))
             raise ForwardException("wrong tos")
 
         dst_prefix = packet['dst-prefix']
@@ -238,7 +239,8 @@ class Router:
 
         if self._data_packet_reached_dst(packet):
             hops = DEFAULT_PACKET_TTL - packet['ttl']
-            print("packet reached destination with {} hops".format(hops))
+            self.log.info(
+                "packet reached destination with {} hops".format(hops))
             return
 
         packet['ttl'] -= 1
@@ -247,12 +249,14 @@ class Router:
         try:
             router = self._route_lookup(packet)
         except ForwardException as e:
-            print("route lookup failed, drop packet, no next hop\n{}".format(e))
-            print(packet['path'])
+            self.log.info(
+                "route lookup failed, drop packet, no next hop\n{}".format(e))
+            self.log.info(packet['path'])
             return
 
-        print("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'], self.id,
-                                                      router.id))
+        self.log.info("forward [{:10}] {:>4} -> {:>4}".format(packet['tos'],
+                                                              self.id,
+                                                              router.id))
         self.forwarded_packets.append([packet['tos'], self, router])
         router.forward_packet(packet)
 
@@ -264,8 +268,7 @@ class Router:
         msg_json = json.dumps(msg)
 
         emsg = "msg transmission [interface:{}, proto:{}, addr:{}]"
-        self.log.info(emsg.format(interface_name, proto, dst_mcast_addr),
-                      time=self.get_time())
+        self.log.debug(emsg.format(interface_name, proto, dst_mcast_addr))
         # send message to all connected routers
         for r_obj in self.connections[interface_name].values():
             r_obj.msg_rx(interface_name, msg_json)
@@ -280,18 +283,18 @@ class Router:
         self.routers = r
 
     def get_time(self):
-        return self.time
+        return TimeWrapper.time
 
     def step(self, time):
         # new round, reset to no transmission
         self.transmission_within_second = False
-        self.time = time
+        TimeWrapper.step()
         self.mm.step()
         self.connect()
         self._core.tick()
 
     def start(self, time):
-        self.time = time
+        TimeWrapper.time = time
         self._core.start()
 
     def stop(self):
@@ -342,19 +345,12 @@ class Router:
 
 def gen_data_packet(src_id, dst_ip, tos='lowest-loss'):
     return {
-        'src-router': src_id,
+        'dmprsim-router': src_id,
         'dst-prefix': dst_ip,
         'ttl': DEFAULT_PACKET_TTL,
         'tos': tos,
         'path': []
     }
-
-
-def setup_log_folder(scenario_name):
-    ld = os.path.join("run-data", scenario_name, "logs")
-    if os.path.exists(ld):
-        shutil.rmtree(ld)
-    os.makedirs(ld)
 
 
 class MobilityArea(object):
