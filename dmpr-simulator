@@ -3,9 +3,9 @@ import argparse
 import logging
 from pathlib import Path
 
-# TODO description
 DESCRIPTION = """\
-description
+The dmpr-simulator, choose one of the scenarios listed below, results are
+generated in the results/ subdirectory
 """
 
 RESULT_PATH = Path('results')
@@ -85,6 +85,8 @@ class AbstractAnalyzer(object):
 class MessageSize(AbstractAnalyzer):
     NUM = 1
     NAME = '{:03}-message-size'.format(NUM)
+    HELP = 'Run a huge combination of parameters of a grid topology and ' \
+           'generate some plots to see the resulting routing-message sizes'
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -101,6 +103,9 @@ class MessageSize(AbstractAnalyzer):
 class DisappearingNode(AbstractAnalyzer):
     NUM = 2
     NAME = '{:03}-disappearing-node'.format(NUM)
+    HELP = 'Run a circle topology, remove a node after 300 seconds and re-add' \
+           ' it after another 600 seconds, this scenario can plot a sequence' \
+           'diagram of the transmitted messages'
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -117,6 +122,8 @@ class DisappearingNode(AbstractAnalyzer):
 class ProfileCore(AbstractAnalyzer):
     NUM = 3
     NAME = '{:03}-profile-core'.format(NUM)
+    HELP = 'runs a small scenario of randomly distributed nodes and uses ' \
+           'cProfile to profile the simulator and the core'
 
     @classmethod
     def run(cls, args):
