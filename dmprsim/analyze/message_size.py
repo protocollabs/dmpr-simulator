@@ -83,11 +83,13 @@ configs = {
 # compression options: 'none', 'zlib', 'lzma
 PLOTS = {
     'density': (
-        ('size', {'interval': '*', 'loss': '*', 'compression': 'zlib'}),
-        ('interval', {'loss': '*', 'size': '*', 'compression': 'zlib'}),
+        ('size', {'interval': '*', 'loss': '*', 'actions': ['zlib', 'len']}),
+        ('size', {'interval': '*', 'loss': '*', 'actions':
+            ['reduce', 'zlib', 'len']}),
+        ('interval', {'loss': '*', 'size': '*', 'actions': ['zlib', 'len']}),
     ),
     'loss': (
-        ('interval', {'density': '*', 'size': '*', 'compression': 'zlib'}),
+        ('interval', {'density': '*', 'size': '*', 'actions': ['zlib', 'len']}),
     ),
 }
 
@@ -123,7 +125,7 @@ def accumulate(input: Path, globs: dict, filename: str,
 
 
 def plot(chartgroup: str, chartgroup_datapoint: int, xaxis: str, data: list,
-         output: Path):
+         output: str):
     """
     plot the data with a defined chartgroup and xaxis with title, labels and
     a legend into the output directory with the filename
@@ -147,17 +149,14 @@ def plot(chartgroup: str, chartgroup_datapoint: int, xaxis: str, data: list,
     ax.plot(x, mins, label="Minimum")
 
     ax.legend()
-    output.mkdir(parents=True, exist_ok=True)
-    fig.savefig(
-        str(output / "{}-{}-{}.png".format(chartgroup, chartgroup_datapoint,
-                                           xaxis)),
-        dpi=300
-    )
+
+    fig.savefig(output, dpi=300)
 
 
 def generate_plots(input: Path, output: Path, filename: str, chartgroup: str,
                    xaxis: str, globs: dict):
     # Generate a separate chart for each datapoint in chartgroup
+    output.mkdir(parents=True, exist_ok=True)
     for chartgroup_datapoint in configs[chartgroup]['datapoints']:
         globs[chartgroup] = chartgroup_datapoint
         cumulated_data = []
@@ -176,7 +175,11 @@ def generate_plots(input: Path, output: Path, filename: str, chartgroup: str,
                                                      xaxis))
             continue
 
-        plot(chartgroup, chartgroup_datapoint, xaxis, cumulated_data, output)
+        plot_filename = "{}-{}-{}-{}.png".format(chartgroup,
+                                                 chartgroup_datapoint,
+                                                 xaxis, filename)
+        plot(chartgroup, chartgroup_datapoint, xaxis, cumulated_data,
+             str(output / plot_filename))
 
 
 def run_scenario(args: object, results_dir: Path, scenario_dir: Path):
@@ -192,11 +195,11 @@ def run_scenario(args: object, results_dir: Path, scenario_dir: Path):
     scenario.start()
 
 
-def process_messages(path: Path, compression):
+def process_messages(path: Path, result_file: str, actions: list):
     dirs = path.glob('*-*-*-*')
     for dir in dirs:
-        process_files(dir.glob('routers/*/trace/tx.msg'), dir / compression,
-                      process_actions[compression])
+        process_files(dir.glob('routers/*/trace/tx.msg'), dir / result_file,
+                      actions)
 
 
 def main(args: object, results_dir: Path, scenario_dir: Path):
@@ -206,12 +209,12 @@ def main(args: object, results_dir: Path, scenario_dir: Path):
     logger.info("Start plotting")
     for chartgroup in PLOTS:
         for xaxis, conf in PLOTS[chartgroup]:
-            compression = conf['compression']
-            len_file = 'len-' + compression
-            done_file = scenario_dir / ('.done-' + compression)
+            actions = conf['actions']
+            result_file = '-'.join(actions)
+            done_file = scenario_dir / ('.done-' + result_file)
             if not done_file.exists():
-                process_messages(scenario_dir, len_file)
+                process_messages(scenario_dir, result_file, actions)
                 done_file.touch()
             generate_plots(input=scenario_dir, output=results_dir,
-                           filename=len_file, chartgroup=chartgroup,
+                           filename=result_file, chartgroup=chartgroup,
                            xaxis=xaxis, globs=conf.copy())

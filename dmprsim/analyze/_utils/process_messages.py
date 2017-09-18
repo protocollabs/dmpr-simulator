@@ -7,6 +7,7 @@ import lzma
 import zlib
 from pathlib import Path
 
+from dmprsim.analyze._utils.compress_path import compress_paths
 from dmprsim.analyze._utils.extract_messages import extract_messages
 
 
@@ -18,47 +19,52 @@ def extract(input_file: Path):
         return ()
 
 
-def message_lengths(input_file: Path):
-    messages = extract(input_file)
+def message_lengths(messages: list):
     return (len(m) for m in messages)
 
 
-def message_lengths_zlib(input_file: Path):
-    messages = extract(input_file)
-    return (len(zlib.compress(m.encode('utf-8'))) for m in messages)
+def messages_zlib(messages: list):
+    return (zlib.compress(m.encode('utf-8')) for m in messages)
 
 
-def message_lengths_lzma(input_file: Path):
-    messages = extract(input_file)
-    return (len(lzma.compress(m.encode('utf-8'))) for m in messages)
+def messages_lzma(messages: list):
+    return (lzma.compress(m.encode('utf-8')) for m in messages)
 
 
-def process_files(dirs: list, output: Path, action: callable):
-    with output.open('w') as f:
-        for input_file in dirs:
-            f.write('\n'.join(str(i) for i in action(input_file)))
-            f.write('\n')
+def reduce_paths(messages: list):
+    return (compress_paths(m) for m in messages)
 
 
 ACTIONS = {
     'len': message_lengths,
-    'len-zlib': message_lengths_zlib,
-    'len-lzma': message_lengths_lzma,
+    'zlib': messages_zlib,
+    'lzma': messages_lzma,
+    'reduce': reduce_paths,
 }
+
+
+def process_files(dirs: list, output: Path, actions: list):
+    with output.open('w') as f:
+        for input_file in dirs:
+            messages = extract(input_file)
+            for action in actions:
+                messages = ACTIONS[action](messages)
+            f.write('\n'.join(str(i) for i in messages))
+            f.write('\n')
 
 
 def main():
     parser = argparse.ArgumentParser(description="process a list of tracefiles")
-    parser.add_argument('--action', '-a', required=True, choices=ACTIONS.keys(),
-                        help='The action to take')
+    parser.add_argument('--action', '-a', required=True,
+                        help='The actions to take')
     parser.add_argument('--output', '-o', required=True,
                         help='output file')
     parser.add_argument('input', nargs='+',
                         help='the tracepoint files')
     args = parser.parse_args()
 
-    action = ACTIONS[args.action]
-    process_files(args.input, args.output, action)
+    actions = [action.strip() for action in args.action.split(',')]
+    process_files(args.input, args.output, actions)
 
 
 if __name__ == '__main__':
