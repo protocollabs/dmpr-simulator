@@ -21,16 +21,16 @@ Features:
 This repository uses git submodules to include the DMPR core component. You need
 to clone this repository recursively. It should be compatible with python3 and
 pypy3, although the dependencies may require additional installation steps
-with pypy.
+(namely `build-essential` and `libffi-dev` on Debian)
 
-```
+```bash
 git clone --recursive https://github.com/protocollabs/dmpr-simulator.git
 python3 -m venv venv  # Or pypy3 -m venv venv
 source venv/bin/activate
 pip install -r requirements
 ```
 
-For generating a movie out of the topology snapshots, ffmpeg is required.
+For generating a movie out of the topology snapshots, `ffmpeg` is required.
 
 ## Usage
 
