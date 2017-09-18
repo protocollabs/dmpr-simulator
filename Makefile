@@ -13,7 +13,7 @@ profile=003-profile-core
 help:
 	@echo "Options:"
 	@echo "	make all:	run all analyze scripts. WARNING: takes a looong time"
-	@echo "	make fast:	just run the some fast scripts, takes only some minutes"
+	@echo "	make fast:	just run the fast scripts, takes only a few minutes"
 	@echo "	make slow:	just run the slow scripts"
 	@echo "	make clean:	Clean all results"
 	@echo "	make clean_fast:	Clean the results from the fast scripts"
