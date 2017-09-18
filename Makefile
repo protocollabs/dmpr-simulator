@@ -40,4 +40,8 @@ clean_slow:
 	$(RM) $(RESULTS)/$(msg_size)
 	$(RM) $(SCENARIOS)/$(msg_size)
 
-.PHONY: help all fast slow clean clean_fast clean_slow
+install-deps:
+	sudo aptitude install libffi-dev
+	pip3 install -r requirements.txt
+
+.PHONY: help all fast slow clean clean_fast clean_slow install-deps
