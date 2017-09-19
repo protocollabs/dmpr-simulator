@@ -41,6 +41,12 @@ class GenericTopology:
         if self.gen_movie and not self.gen_images:
             self.gen_images = True
 
+        if draw is None:
+            logger.warning("Could not import pil and cairo, skipping image and "
+                           "video generation")
+            self.gen_movie = False
+            self.gen_images = False
+
         if scenario_dir is None:
             self.scenario_dir = Path.cwd() / 'run-data' / self.name
         self.scenario_dir.mkdir(parents=True, exist_ok=True)
