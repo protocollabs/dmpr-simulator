@@ -40,4 +40,7 @@ clean_slow:
 	$(RM) $(RESULTS)/$(msg_size)
 	$(RM) $(SCENARIOS)/$(msg_size)
 
-.PHONY: help all fast slow clean clean_fast clean_slow
+check:
+	$(RUN_PY) 4 --quiet --disable-logfiles
+
+.PHONY: help all fast slow clean clean_fast clean_slow check

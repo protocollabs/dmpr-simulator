@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import tempfile
 from pathlib import Path
 
 DESCRIPTION = """\
@@ -133,6 +134,24 @@ class ProfileCore(AbstractAnalyzer):
     def run(cls, args):
         from dmprsim.analyze.profile_core import main
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
+class CheckDeps(AbstractAnalyzer):
+    NUM = 4
+    NAME = '{:03}-self-test'.format(NUM)
+    HELP = 'a quick self-test'
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.check_deps import main
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tmp = Path(temp_dir)
+            error = main(args, tmp / 'result', tmp / 'scenario')
+        if error:
+            logger.warning('There were errors while running the checks')
+            exit(1)
+        else:
+            logger.warning('Everything seems to be ok')
 
 
 def main():
