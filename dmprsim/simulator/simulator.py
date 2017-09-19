@@ -386,10 +386,10 @@ class MobilityModel(object):
         self.x += v_x
         self.y += v_y
 
-        if self.x not in range(self.area.x):
+        if int(self.x) not in range(self.area.x):
             v_x = -v_x
 
-        if self.y not in range(self.area.y):
+        if int(self.y) not in range(self.area.y):
             v_y = -v_y
 
         self.velocity = v_x, v_y

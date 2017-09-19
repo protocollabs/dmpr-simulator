@@ -86,10 +86,7 @@ class GenericTopology:
 
     def _draw(self, sec):
         if self.gen_images and draw:
-            class args:
-                color_scheme = 'light'
-
-            draw.draw_images(args, self.scenario_dir, self.area,
+            draw.draw_images(self.args, self.scenario_dir, self.area,
                              self.routers, sec)
 
     def _generate_routers(self, models):
