@@ -10,7 +10,7 @@ def main(args, results_dir: Path, scenario_dir: Path):
     sim = RandomTopology(
         name='python_profile',
         simulation_time=50,
-        num_routers=150,
+        num_routers=100,
         area=(500, 500),
         velocity=lambda: 0.05,
         args=args,

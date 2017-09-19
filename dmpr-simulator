@@ -123,7 +123,8 @@ class ProfileCore(AbstractAnalyzer):
     NUM = 3
     NAME = '{:03}-profile-core'.format(NUM)
     HELP = 'runs a small scenario of randomly distributed nodes and uses ' \
-           'cProfile to profile the simulator and the core'
+           'cProfile to profile the simulator and the core. Creates a ' \
+           'profile.pstats file for the python module pstats'
 
     @classmethod
     def run(cls, args):

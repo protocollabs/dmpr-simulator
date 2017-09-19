@@ -9,5 +9,5 @@ def main(args, results_dir: Path, scenario_dir: Path):
         'main(args, results_dir, scenario_dir)',
         globals=globals(),
         locals=locals(),
-        filename=str(results_dir / 'profile'),
+        filename=str(results_dir / 'profile.pstats'),
     )
