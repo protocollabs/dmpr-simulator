@@ -115,9 +115,9 @@ def generate_routers(interfaces: list, mobility_models: list,
     return routers
 
 
-def ffmpeg(directory: Path):
-    source = directory / 'images-range-tx-merge' / '*.png'
-    dest = directory / 'dmpr.mp4'
+def ffmpeg(result_path: Path, scenario_path: Path):
+    source = scenario_path / 'images' / '*.png'
+    dest = result_path / 'dmpr.mp4'
     logger.info("Generating movie at {}".format(dest))
 
     subprocess.call(('ffmpeg',
