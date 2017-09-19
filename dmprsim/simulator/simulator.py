@@ -288,7 +288,7 @@ class Router:
     def step(self, time):
         # new round, reset to no transmission
         self.transmission_within_second = False
-        TimeWrapper.step()
+        TimeWrapper.time = time
         self.mm.step()
         self.connect()
         self._core.tick()
