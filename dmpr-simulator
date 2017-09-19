@@ -154,6 +154,29 @@ class CheckDeps(AbstractAnalyzer):
             logger.warning('Everything seems to be ok')
 
 
+class RandomNetwork(AbstractAnalyzer):
+    NUM = 5
+    NAME = '{:03}-random-network'.format(NUM)
+    HELP = 'a random network, WIP!!!'
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        parser.add_argument('--num-routers', type=int, default=125)
+        parser.add_argument('--simulation-time', type=int, default=300)
+        parser.add_argument('--random-seed-prep', type=int, default=1,
+                            help='The random seed for generating the network.'
+                                 ' Same seed should result in the same network.')
+        parser.add_argument('--random-seed-runtime', type=int, default=1,
+                            help='The random seed for simulating the network.'
+                                 ' Same seed on the same network should result'
+                                 ' in the same simulation')
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.random_network import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
 def main():
     # Use a centralised parser for all optional arguments and add it to
     # the main and _all_ subparsers so that arguments can be set before or
