@@ -47,16 +47,23 @@ class AbstractAnalyzer(object):
         core_console_handler = logging.StreamHandler()
         core_console_handler.setLevel(logging.WARNING)
 
-        (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
-        (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+        if not args.disable_logfiles:
+            (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+            (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
 
-        file_handler = logging.FileHandler(
-            str(RESULT_PATH / cls.NAME / 'sim.log'))
-        file_handler.setLevel(logging.INFO)
+            file_handler = logging.FileHandler(
+                str(RESULT_PATH / cls.NAME / 'sim.log'))
+            file_handler.setLevel(logging.INFO)
 
-        core_file_handler = logging.FileHandler(
-            str(RESULT_PATH / cls.NAME / 'core.log'))
-        core_file_handler.setLevel(logging.INFO)
+            core_file_handler = logging.FileHandler(
+                str(RESULT_PATH / cls.NAME / 'core.log'))
+            core_file_handler.setLevel(logging.INFO)
+
+            logger.addHandler(file_handler)
+            core_logger.addHandler(core_file_handler)
+
+        else:
+            file_handler = core_file_handler = logging.NullHandler()
 
         if args.debug:
             console_handler.setLevel(logging.DEBUG)
@@ -70,10 +77,6 @@ class AbstractAnalyzer(object):
 
         logger.addHandler(console_handler)
         core_logger.addHandler(core_console_handler)
-
-        if not args.disable_logfiles:
-            logger.addHandler(file_handler)
-            core_logger.addHandler(core_file_handler)
 
         cls.run(args)
 
