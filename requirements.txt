@@ -3,5 +3,4 @@ cairocffi==0.8.0
 matplotlib==2.0.2
 numpy==1.13.1
 pandas==0.19.2
-Pillow==4.2.1
 seqdiag==0.9.5

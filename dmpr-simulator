@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import tempfile
 from pathlib import Path
 
 DESCRIPTION = """\
@@ -47,16 +48,23 @@ class AbstractAnalyzer(object):
         core_console_handler = logging.StreamHandler()
         core_console_handler.setLevel(logging.WARNING)
 
-        (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
-        (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+        if not args.disable_logfiles:
+            (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+            (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
 
-        file_handler = logging.FileHandler(
-            str(RESULT_PATH / cls.NAME / 'sim.log'))
-        file_handler.setLevel(logging.INFO)
+            file_handler = logging.FileHandler(
+                str(RESULT_PATH / cls.NAME / 'sim.log'))
+            file_handler.setLevel(logging.INFO)
 
-        core_file_handler = logging.FileHandler(
-            str(RESULT_PATH / cls.NAME / 'core.log'))
-        core_file_handler.setLevel(logging.INFO)
+            core_file_handler = logging.FileHandler(
+                str(RESULT_PATH / cls.NAME / 'core.log'))
+            core_file_handler.setLevel(logging.INFO)
+
+            logger.addHandler(file_handler)
+            core_logger.addHandler(core_file_handler)
+
+        else:
+            file_handler = core_file_handler = logging.NullHandler()
 
         if args.debug:
             console_handler.setLevel(logging.DEBUG)
@@ -70,10 +78,6 @@ class AbstractAnalyzer(object):
 
         logger.addHandler(console_handler)
         core_logger.addHandler(core_console_handler)
-
-        if not args.disable_logfiles:
-            logger.addHandler(file_handler)
-            core_logger.addHandler(core_file_handler)
 
         cls.run(args)
 
@@ -123,11 +127,53 @@ class ProfileCore(AbstractAnalyzer):
     NUM = 3
     NAME = '{:03}-profile-core'.format(NUM)
     HELP = 'runs a small scenario of randomly distributed nodes and uses ' \
-           'cProfile to profile the simulator and the core'
+           'cProfile to profile the simulator and the core. Creates a ' \
+           'profile.pstats file for the python module pstats'
 
     @classmethod
     def run(cls, args):
         from dmprsim.analyze.profile_core import main
+        main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
+
+
+class CheckDeps(AbstractAnalyzer):
+    NUM = 4
+    NAME = '{:03}-self-test'.format(NUM)
+    HELP = 'a quick self-test'
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.check_deps import main
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tmp = Path(temp_dir)
+            error = main(args, tmp / 'result', tmp / 'scenario')
+        if error:
+            logger.warning('There were errors while running the checks')
+            exit(1)
+        else:
+            logger.warning('Everything seems to be ok')
+
+
+class RandomNetwork(AbstractAnalyzer):
+    NUM = 5
+    NAME = '{:03}-random-network'.format(NUM)
+    HELP = 'a random network, WIP!!!'
+
+    @classmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        parser.add_argument('--num-routers', type=int, default=125)
+        parser.add_argument('--simulation-time', type=int, default=300)
+        parser.add_argument('--random-seed-prep', type=int, default=1,
+                            help='The random seed for generating the network.'
+                                 ' Same seed should result in the same network.')
+        parser.add_argument('--random-seed-runtime', type=int, default=1,
+                            help='The random seed for simulating the network.'
+                                 ' Same seed on the same network should result'
+                                 ' in the same simulation')
+
+    @classmethod
+    def run(cls, args):
+        from dmprsim.analyze.random_network import main
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
 
 
@@ -146,6 +192,8 @@ def main():
     logging_group.add_argument('--disable-logfiles', action='store_true')
     optional_parser.add_argument('--enable-video', action='store_true')
     optional_parser.add_argument('--enable-images', action='store_true')
+    optional_parser.add_argument('--color-scheme', default='light',
+                                 choices=('light', 'dark'))
     optional_parser.add_argument('--simulate-forwarding', action='store_true')
 
     parser = argparse.ArgumentParser(parents=[optional_parser])

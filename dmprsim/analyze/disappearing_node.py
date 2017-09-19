@@ -22,7 +22,7 @@ skel = """
 def main(args, results_dir: Path, scenario_dir: Path):
     scenario(args, results_dir, scenario_dir)
 
-    if not args.sequence_diagram:
+    if not getattr(args, 'sequence_diagram', False):
         return
     routers = set()
     messages = {}
