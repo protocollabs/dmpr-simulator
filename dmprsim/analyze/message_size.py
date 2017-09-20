@@ -4,22 +4,19 @@ as the y-axis
 """
 
 import logging
-import shutil
+import multiprocessing
 from pathlib import Path
 from typing import Union
 
 import matplotlib
-
-matplotlib.use('AGG')
 import matplotlib.pyplot as plt
-
-matplotlib.style.use('ggplot')
-
 import numpy as np
 
-from dmprsim.analyze._utils.process_messages import ACTIONS as process_actions, \
-    process_files
+from dmprsim.analyze._utils.process_messages import process_files
 from dmprsim.scenarios.message_size import MessageSizeScenario
+
+matplotlib.use('AGG')
+matplotlib.style.use('ggplot')
 
 configs = {
     'density': {
@@ -195,11 +192,24 @@ def run_scenario(args: object, results_dir: Path, scenario_dir: Path):
     scenario.start()
 
 
+def _process_message_worker(args):
+    dir, result_file, actions = args
+    process_files(dir.glob('routers/*/trace/tx.msg'), dir / result_file,
+                  actions)
+
+
 def process_messages(path: Path, result_file: str, actions: list):
-    dirs = path.glob('*-*-*-*')
-    for dir in dirs:
-        process_files(dir.glob('routers/*/trace/tx.msg'), dir / result_file,
-                      actions)
+    dirs = tuple(path.glob('*-*-*-*'))
+    pool = multiprocessing.Pool()
+    all_ = len(dirs)
+    cur = 0
+    for _ in pool.imap_unordered(_process_message_worker,
+        ((dir, result_file, actions) for dir in dirs),
+        chunksize = 20):
+        cur += 1
+        logger.info('{:.2%} done'.format(cur/all_))
+    pool.close()
+    pool.join()
 
 
 def main(args: object, results_dir: Path, scenario_dir: Path):
@@ -211,6 +221,8 @@ def main(args: object, results_dir: Path, scenario_dir: Path):
         for xaxis, conf in PLOTS[chartgroup]:
             actions = conf['actions']
             result_file = '-'.join(actions)
+            logger.info(
+                'Processing {}-{}-{}'.format(chartgroup, xaxis, result_file))
             done_file = scenario_dir / ('.done-' + result_file)
             if not done_file.exists():
                 process_messages(scenario_dir, result_file, actions)
