@@ -50,10 +50,8 @@ class GenericTopology:
         if scenario_dir is None:
             self.scenario_dir = Path.cwd() / 'run-data' / self.name
 
-        # FIXME workaround for race-condition, fixed in Python 3.5.4
-        # See https://bugs.python.org/issue29694
         try:
-            self.scenario_dir.mkdir(parents=True, exist_ok=True)
+            self.scenario_dir.mkdir(parents=True)
         except FileExistsError:
             pass
 

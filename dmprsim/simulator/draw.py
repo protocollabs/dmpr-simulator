@@ -373,4 +373,7 @@ def draw_images(args, ld: Path, area, r, img_idx):
 def setup_img_folder(log_directory: Path):
     path = log_directory / 'images'
     shutil.rmtree(str(path), ignore_errors=True)
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True)
+    except FileExistsError:
+        pass

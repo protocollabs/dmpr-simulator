@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Tuple
 
 
 def all_tracefiles(input_dirs, tracepoint) -> tuple:
@@ -9,7 +8,7 @@ def all_tracefiles(input_dirs, tracepoint) -> tuple:
             yield router.name, tracefile
 
 
-def extract_messages(tracefile: Path) -> List[Tuple]:
+def extract_messages(tracefile: Path) -> list:
     messages = []
     try:
         with tracefile.open() as f:

@@ -52,7 +52,10 @@ class Tracer(NoOpTracer):
             for tracer in enable:
                 self.enable(tracer)
 
-        directory.mkdir(parents=True, exist_ok=True)
+        try:
+            directory.mkdir(parents=True)
+        except FileExistsError:
+            pass
         self.directory = directory
 
     def enable(self, tracepoint):

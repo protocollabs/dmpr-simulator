@@ -153,7 +153,10 @@ def plot(chartgroup: str, chartgroup_datapoint: int, xaxis: str, data: list,
 def generate_plots(input: Path, output: Path, filename: str, chartgroup: str,
                    xaxis: str, globs: dict):
     # Generate a separate chart for each datapoint in chartgroup
-    output.mkdir(parents=True, exist_ok=True)
+    try:
+        output.mkdir(parents=True)
+    except FileExistsError:
+        pass
     for chartgroup_datapoint in configs[chartgroup]['datapoints']:
         globs[chartgroup] = chartgroup_datapoint
         cumulated_data = []
