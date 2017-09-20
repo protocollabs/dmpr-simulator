@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def main(args, result_path: Path, scenario_path: Path) -> bool:
     error = False
-    for module in ('PIL', 'seqdiag', 'matplotlib', 'numpy', 'pandas'):
+    for module in ('seqdiag', 'matplotlib', 'numpy', 'pandas'):
         try:
             importlib.import_module(module)
         except ImportError:
@@ -30,5 +30,6 @@ def main(args, result_path: Path, scenario_path: Path) -> bool:
         main(args, result_path, scenario_path)
     except Exception:
         logger.exception('Failed to run scenario')
+        error = True
 
     return error
