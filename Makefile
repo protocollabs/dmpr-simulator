@@ -54,4 +54,7 @@ check:
 distclean:
 	git clean -f -X -d
 
-.PHONY: help all fast-run long-rung clean clean-fast-run clean-long-run install-deps distclean
+test:
+	$(PY) -m pytest tests/
+
+.PHONY: help all fast-run long-rung clean clean-fast-run clean-long-run install-deps distclean test
