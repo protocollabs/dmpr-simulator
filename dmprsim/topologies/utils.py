@@ -7,7 +7,9 @@ try:
     from dmprsim.simulator import draw
 except ImportError:
     draw = None
-from dmprsim.simulator import Router, gen_data_packet
+from dmprsim.simulator import Router
+
+from dmprsim.simulator.middlewares import MiddlewareController, RouterTransmittedMiddleware, RouterForwardedPacketMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -58,16 +60,21 @@ class GenericTopology:
         self.tx_router = None
         self.rx_ip = None
         self.area = None
-        self.routers = []
+        self.models = []
+        self.interfaces = []
 
     def prepare(self):
         if self.gen_images and draw:
             draw.setup_img_folder(self.scenario_dir)
+            MiddlewareController.activate(RouterForwardedPacketMiddleware())
+            MiddlewareController.activate(RouterTransmittedMiddleware())
 
     def start(self):
         for tracepoint in self.tracepoints:
-            for router in self.routers:
-                router.tracer.enable(tracepoint)
+            for model in self.models:
+                model.router.tracer.enable(tracepoint)
+
+        self.area.start()
 
         random.seed(self.random_seed_runtime)
 
@@ -75,45 +82,49 @@ class GenericTopology:
             if not self.quiet:
                 logger.info("{}\n\ttime: {}/{}".format("=" * 50, sec,
                                                        self.simulation_time))
-            for router in self.routers:
-                router.step(sec)
+            self.area.step(sec)
 
             self._draw(sec)
             self._forward_packet('lowest-loss')
             self._forward_packet('highest-bandwidth')
             yield sec
 
+    def _set_random_tx_rx_routers(self):
+        if self.simulate_forwarding:
+            tx_model, rx_model = random.sample(self.models, 2)
+            self.tx_router = tx_model.router
+            self.tx_router.is_transmitter = True
+            rx_model.router.is_receiver = True
+            self.rx_ip = rx_model.router.get_random_network()
+
     def _forward_packet(self, tos):
         if self.simulate_forwarding:
-            packet = gen_data_packet(self.tx_router, self.rx_ip, tos=tos)
-            self.tx_router.forward_packet(packet)
+            self.tx_router.send_packet(self.rx_ip, tos)
 
     def _draw(self, sec):
         if self.gen_images and draw:
             draw.draw_images(self.args, self.scenario_dir, self.area,
-                             self.routers, sec)
+                             self.models, sec)
 
     def _generate_routers(self, models):
-        return generate_routers(interfaces=self.interfaces,
-                                log_directory=self.scenario_dir,
-                                config_override=self.config_override,
-                                mobility_models=models,
-                                router_args=self.router_args)
+        generate_routers(interfaces=self.interfaces,
+                         log_directory=self.scenario_dir,
+                         config_override=self.config_override,
+                         mobility_models=models,
+                         router_args=self.router_args)
 
 
 def generate_routers(interfaces: list, mobility_models: list,
                      log_directory: Path, config_override: dict,
                      router_args={}):
-    routers = []
     for i, model in enumerate(mobility_models):
         ld = log_directory / 'routers' / str(i)
-        routers.append(Router(str(i), interfaces, model, ld,
-                              config_override, **router_args))
-    for router in routers:
-        router.register_routers(routers)
-        router.connect()
-        router.start(0)
-    return routers
+        Router(str(i),
+               interfaces=interfaces,
+               model=model,
+               log_directory=ld,
+               config_override=config_override,
+               **router_args)
 
 
 def ffmpeg(result_path: Path, scenario_path: Path):

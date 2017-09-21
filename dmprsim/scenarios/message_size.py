@@ -56,18 +56,18 @@ class MessageSizeScenario(object):
         low_memory = combinations - mid_memory
 
         ram = getattr(self.args, 'max_ram', 16)
-        if ram < 2:
-            print("Need at least 16 GB")
+        if ram < 14:
+            print("Need at least 14 GB")
             exit(1)
 
         logger.info("Starting low memory scenarios, ~2GB each")
         self._apply(math.floor(ram / 2), low_memory)
         logger.info("Starting mid memory scenarios, ~4GB each")
-        self._apply(math.floor(ram / 2), mid_memory)
+        self._apply(math.floor(ram / 4), mid_memory)
         logger.info("Starting high memory scenarios, ~8GB each")
-        self._apply(math.floor(ram / 2), high_memory)
+        self._apply(math.floor(ram / 8), high_memory)
         logger.info("Starting very high memory scenarios, ~12GB each")
-        self._apply(math.floor(ram / 2), very_high_memory)
+        self._apply(math.floor(ram / 12), very_high_memory)
 
         (self.scenario_dir / '.done').touch()
         logger.info("Scenarios done")
@@ -146,7 +146,7 @@ class MessageSizeScenario(object):
             range_factor=math.sqrt(mesh),
             core_config={'max-full-update-interval': full_interval},
             tracepoints=('tx.msg',),
-            router_args={'tracer': tracer},
+            router_args={'tracer_cls': tracer},
             args=self.args,
         )
         sim.quiet = not getattr(self.args, 'verbose', False)

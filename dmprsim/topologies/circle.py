@@ -2,7 +2,7 @@ import math
 import random
 from pathlib import Path
 
-from dmprsim.simulator import MobilityArea, MobilityModel
+from dmprsim.simulator import MobilityArea, MovingMobilityModel
 from dmprsim.topologies.utils import GenericTopology
 
 
@@ -38,11 +38,14 @@ class CircleTopology(GenericTopology):
         )
         self.num_routers = num_routers
         self.interfaces = [
-            {"name": "wifi0", "range": 0, "bandwidth": 8000, "loss": 10},
+            {
+                "name": "wifi0",
+                "range": 0,
+                "core-config": {"bandwidth": 8000, "loss": 10},
+            },
         ]
         self.random_seed_prep = random_seed_prep
 
-        self.routers = []
         self.tx_router = None
         self.rx_ip = None
         self.area = None
@@ -68,28 +71,19 @@ class CircleTopology(GenericTopology):
         min_range = int(math.ceil(circumference / self.num_routers))
         self.interfaces[0]['range'] = min_range
 
-        models = []
+        self.models = []
         step = 2 * math.pi / self.num_routers
         for i in range(self.num_routers):
             alpha = i * step
             x = radius * math.cos(alpha) + center
             y = radius * math.sin(alpha) + center
-            models.append(MobilityModel(self.area, x=x, y=y))
+            self.models.append(MovingMobilityModel(self.area, coords=(x, y)))
 
-        self.routers = self._generate_routers(models)
+        self._generate_routers(self.models)
 
-        if self.simulate_forwarding:
-            self.tx_router = random.choice(self.routers)
-            while True:
-                rx_router = random.choice(self.routers)
-                if rx_router != self.tx_router:
-                    break
+        self._set_random_tx_rx_routers()
 
-            self.tx_router.is_transmitter = True
-            rx_router.is_receiver = True
-            self.rx_ip = rx_router.pick_random_configured_network()
-
-        return self.routers
+        return self.models
 
 
 if __name__ == '__main__':

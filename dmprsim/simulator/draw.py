@@ -7,6 +7,8 @@ try:
 except ImportError:
     import cairocffi as cairo
 
+from .middlewares import RouterForwardedPacketMiddleware, RouterTransmittedMiddleware
+
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
 
@@ -135,22 +137,22 @@ def color_text_inverse(args):
         return color_text_inverse_dark()
 
 
-def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
-    ctx.rectangle(0, 0, area.x, area.y)
+def draw_router_loc(args, area, models, ctx: cairo.Context):
+    ctx.rectangle(0, 0, area.width, area.height)
     ctx.set_source_rgba(*color_db(args))
     ctx.fill()
 
-    for router in r:
-        if not router.mm.visible:
+    for model in models:
+        if not model.visible:
             continue
-        x, y = router.coordinates()
+        x, y = model.coordinates()
 
         ctx.set_line_width(0.1)
         path_thickness = 6.0
         # iterate over links
         interfaces_idx = 0
-        for i, interface_name in enumerate(router.interfaces):
-            range_ = router.interfaces[interface_name]['range']
+        for i, interface in enumerate(model.router.interfaces.values()):
+            range_ = interface['range']
             ctx.set_source_rgba(*color_range(args, i))
             ctx.move_to(x, y)
             ctx.arc(x, y, range_, 0, 2 * math.pi)
@@ -158,10 +160,10 @@ def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
 
             # draw lines between links
             ctx.set_line_width(path_thickness)
-            for r_id, r_obj in router.connections[interface_name].items():
-                if not r_obj.mm.visible:
+            for neighbor in model.get_neighbors(interface):
+                if not neighbor.model.visible:
                     continue
-                other_x, other_y = r_obj.coordinates()
+                other_x, other_y = neighbor.model.coordinates()
                 ctx.move_to(x, y)
                 ctx.set_source_rgba(*color_links(args, interfaces_idx))
                 ctx.line_to(other_x, other_y)
@@ -174,33 +176,30 @@ def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
     # draw active links
     ctx.set_line_width(4.0)
     dash_len = 4.0
-    for router in r:
-        for tos, src, dst in router.forwarded_packets:
-            ctx.set_source_rgba(1., 0, 0, 1)
-            ctx.set_dash([dash_len, dash_len])
-            if tos == "lowest-loss":
-                ctx.set_source_rgba(0., 0., 1., 1)
-                ctx.set_dash([dash_len, dash_len], dash_len)
-            s_x, s_y = src.coordinates()
-            d_x, d_y = dst.coordinates()
-            ctx.move_to(s_x, s_y)
-            ctx.line_to(d_x, d_y)
-            ctx.stroke()
-    # reset now
-    for router in r:
-        router.forwarded_packets = list()
+    for tos, src, dst in RouterForwardedPacketMiddleware.forwardingRouters:
+        ctx.set_source_rgba(1., 0, 0, 1)
+        ctx.set_dash([dash_len, dash_len])
+        if tos == "lowest-loss":
+            ctx.set_source_rgba(0., 0., 1., 1)
+            ctx.set_dash([dash_len, dash_len], dash_len)
+        s_x, s_y = src.model.coordinates()
+        d_x, d_y = dst.model.coordinates()
+        ctx.move_to(s_x, s_y)
+        ctx.line_to(d_x, d_y)
+        ctx.stroke()
+    RouterForwardedPacketMiddleware.reset()
 
     # draw text and node circle
     ctx.set_line_width(3.0)
-    for router in r:
-        if not router.mm.visible:
+    for model in models:
+        if not model.visible:
             continue
-        x, y = router.coordinates()
+        x, y = model.coordinates()
         # node middle point
         ctx.move_to(x, y)
         ctx.arc(x, y, 5, 0, 2 * math.pi)
 
-        if router.is_transmitter:
+        if model.router.is_transmitter:
             ctx.set_source_rgb(*color_node_transmitter_outline(args))
             ctx.stroke_preserve()
 
@@ -216,7 +215,7 @@ def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
             ctx.show_text("Transmitter")
             ctx.set_antialias(True)
 
-        if router.is_receiver:
+        if model.router.is_receiver:
             # draw circle outline
             ctx.set_source_rgb(*color_node_receiver_outline(args))
             ctx.stroke_preserve()
@@ -242,11 +241,11 @@ def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
         ctx.set_font_size(10)
         ctx.set_source_rgb(*color_text_inverse(args))
         ctx.move_to(x + 10 + 1, y + 10 + 1)
-        ctx.show_text(str(router.id))
+        ctx.show_text(str(model.router.id))
         ctx.set_source_rgb(*color_text(args))
         ctx.move_to(x + 10, y + 10)
         ctx.set_antialias(False)
-        ctx.show_text(str(router.id))
+        ctx.show_text(str(model.router.id))
         ctx.set_antialias(True)
 
 
@@ -280,43 +279,45 @@ def color_tx_links(args):
         return color_tx_links_dark()
 
 
-def draw_router_transmission(args, ld: Path, area, r, ctx: cairo.Context):
-    ctx.rectangle(0, 0, area.x, area.y)
+def draw_router_transmission(args, area, models, ctx: cairo.Context):
+    ctx.rectangle(0, 0, area.width, area.height)
     ctx.set_source_rgba(*color_db(args))
     ctx.fill()
 
     # transmitting circles
-    for router in r:
-        if not router.mm.visible:
+    for router in RouterTransmittedMiddleware.transmitting_routers:
+        model = router.model
+        if not model.visible:
             continue
-        x, y = router.coordinates()
+        x, y = model.coordinates()
 
-        if router.transmission_within_second:
-            distance = \
-                max(router.interfaces.values(), key=lambda x: x['range'])[
-                    'range']
-            ctx.set_source_rgba(*color_transmission_circle(args))
-            ctx.move_to(x, y)
-            ctx.arc(x, y, distance, 0, 2 * math.pi)
-            ctx.fill()
+        distance = \
+            max(model.router.interfaces.values(), key=lambda x: x['range'])[
+                'range']
+        ctx.set_source_rgba(*color_transmission_circle(args))
+        ctx.move_to(x, y)
+        ctx.arc(x, y, distance, 0, 2 * math.pi)
+        ctx.fill()
 
-    for router in r:
-        if not router.mm.visible:
+    RouterTransmittedMiddleware.reset()
+
+    for model in models:
+        if not model.visible:
             continue
-        x, y = router.coordinates()
+        x, y = model.coordinates()
 
         ctx.set_line_width(0.1)
         path_thickness = 6.0
         # iterate over links
-        for i, interface_name in enumerate(router.interfaces):
-            range_ = router.interfaces[interface_name]['range']
+        for i, interface_name in enumerate(model.router.interfaces):
+            interface = model.router.interfaces[interface_name]
 
             # draw lines between links
             ctx.set_line_width(path_thickness)
-            for r_id, r_obj in router.connections[interface_name].items():
-                if not r_obj.mm.visible:
+            for neighbor in model.get_neighbors(interface):
+                if not neighbor.model.visible:
                     continue
-                other_x, other_y = r_obj.coordinates()
+                other_x, other_y = neighbor.model.coordinates()
                 ctx.move_to(x, y)
                 ctx.set_source_rgba(*color_tx_links(args))
                 ctx.line_to(other_x, other_y)
@@ -327,10 +328,10 @@ def draw_router_transmission(args, ld: Path, area, r, ctx: cairo.Context):
                 path_thickness = 2.0
 
     # draw dots over all
-    for router in r:
-        if not router.mm.visible:
+    for model in models:
+        if not model.visible:
             continue
-        x, y = router.coordinates()
+        x, y = model.coordinates()
 
         ctx.set_line_width(0.0)
         ctx.set_source_rgba(*color_tx_links(args))
@@ -339,7 +340,7 @@ def draw_router_transmission(args, ld: Path, area, r, ctx: cairo.Context):
         ctx.fill()
 
 
-def draw_images(args, ld: Path, area, r, img_idx):
+def draw_images(args, ld: Path, area, models, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, IMAGE_WIDTH, IMAGE_HEIGHT)
     full_ctx = cairo.Context(surface)
     full_ctx.rectangle(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT)
@@ -347,10 +348,10 @@ def draw_images(args, ld: Path, area, r, img_idx):
     full_ctx.fill()
 
     effective_width = IMAGE_WIDTH / 2
-    scale_factor = min(effective_width / area.x, IMAGE_HEIGHT / area.y)
+    scale_factor = min(effective_width / area.width, IMAGE_HEIGHT / area.height)
 
-    x_center_offset = effective_width / 2 - (area.x * scale_factor / 2)
-    y_center_offset = IMAGE_HEIGHT / 2 - (area.y * scale_factor / 2)
+    x_center_offset = effective_width / 2 - (area.width * scale_factor / 2)
+    y_center_offset = IMAGE_HEIGHT / 2 - (area.height * scale_factor / 2)
 
     # One context on the left, scaled to half the width and full height
     # and centered on x- and y-axis
@@ -364,8 +365,8 @@ def draw_images(args, ld: Path, area, r, img_idx):
     right_ctx.translate(effective_width + x_center_offset, y_center_offset)
     right_ctx.scale(scale_factor, scale_factor)
 
-    draw_router_transmission(args, ld, area, r, right_ctx)
-    draw_router_loc(args, ld, area, r, left_ctx)
+    draw_router_transmission(args, area, models, right_ctx)
+    draw_router_loc(args, area, models, left_ctx)
 
     surface.write_to_png(str(ld / 'images' / '{:05}.png'.format(img_idx)))
 
