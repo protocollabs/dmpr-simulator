@@ -16,7 +16,7 @@ def compress_paths(msg: str) -> str:
     msg = json.loads(msg)
     if 'routing-data' in msg:
         for policy, nodes in msg.get('routing-data').items():
-            paths = [node['path'] for node in nodes.values()]
+            paths = [node['path'] for node in nodes.values() if node is not None]
             paths = sorted(paths, key=lambda p: -len(get_nodes(p)))
 
             new_paths = []
