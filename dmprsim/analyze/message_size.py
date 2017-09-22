@@ -6,7 +6,6 @@ as the y-axis
 import logging
 import multiprocessing
 from pathlib import Path
-from typing import Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -94,7 +93,7 @@ logger = logging.getLogger(__name__)
 
 
 def accumulate(input: Path, globs: dict, filename: str,
-               xaxis_datapoint: int) -> Union[tuple, bool]:
+               xaxis_datapoint: int) -> np.array:
     """
     for `glob`/filename in input directory, accumulate the message lengths
     and return a tuple with (x, min, perc25, avg, perc75, max)
