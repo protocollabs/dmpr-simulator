@@ -59,7 +59,10 @@ def main(args, results_dir: Path, scenario_dir: Path):
     tree = seq_parser.parse_string(result)
     diagram = builder.ScreenNodeBuilder.build(tree)
     filename = str(results_dir / 'sequence_diagram.svg')
-    results_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        results_dir.mkdir(parents=True)
+    except FileExistsError:
+        pass
     draw = drawer.DiagramDraw(args.seq_diag_type, diagram, filename=filename)
     draw.draw()
     draw.save()

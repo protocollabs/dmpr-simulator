@@ -49,8 +49,14 @@ class AbstractAnalyzer(object):
         core_console_handler.setLevel(logging.WARNING)
 
         if not args.disable_logfiles:
-            (RESULT_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
-            (SCENARIO_PATH / cls.NAME).mkdir(parents=True, exist_ok=True)
+            try:
+                (RESULT_PATH / cls.NAME).mkdir(parents=True)
+            except FileExistsError:
+                pass
+            try:
+                (SCENARIO_PATH / cls.NAME).mkdir(parents=True)
+            except FileExistsError:
+                pass
 
             file_handler = logging.FileHandler(
                 str(RESULT_PATH / cls.NAME / 'sim.log'))
