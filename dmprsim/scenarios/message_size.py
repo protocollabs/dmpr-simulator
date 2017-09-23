@@ -73,7 +73,10 @@ class MessageSizeScenario(object):
         logger.info("Scenarios done")
 
     def _save_checkpoint(self, data):
-        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.checkpoint_file.parent.mkdir(parents=True)
+        except FileExistsError:
+            pass
         with self.checkpoint_file.open('wb') as f:
             pickle.dump(data, f)
 

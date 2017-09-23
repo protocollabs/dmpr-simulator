@@ -41,7 +41,7 @@ def main(args, results_dir: Path, scenario_dir: Path):
             routers[1].mm.visible = True
 
     if simulation.gen_movie:
-        ffmpeg(results_dir)
+        ffmpeg(results_dir, scenario_dir)
 
 
 if __name__ == '__main__':

@@ -41,9 +41,19 @@ class GenericTopology:
         if self.gen_movie and not self.gen_images:
             self.gen_images = True
 
+        if draw is None:
+            logger.warning("Could not import pil and cairo, skipping image and "
+                           "video generation")
+            self.gen_movie = False
+            self.gen_images = False
+
         if scenario_dir is None:
             self.scenario_dir = Path.cwd() / 'run-data' / self.name
-        self.scenario_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            self.scenario_dir.mkdir(parents=True)
+        except FileExistsError:
+            pass
 
         self.tx_router = None
         self.rx_ip = None
@@ -80,10 +90,7 @@ class GenericTopology:
 
     def _draw(self, sec):
         if self.gen_images and draw:
-            class args:
-                color_scheme = 'light'
-
-            draw.draw_images(args, self.scenario_dir, self.area,
+            draw.draw_images(self.args, self.scenario_dir, self.area,
                              self.routers, sec)
 
     def _generate_routers(self, models):
@@ -109,9 +116,9 @@ def generate_routers(interfaces: list, mobility_models: list,
     return routers
 
 
-def ffmpeg(directory: Path):
-    source = directory / 'images-range-tx-merge' / '*.png'
-    dest = directory / 'dmpr.mp4'
+def ffmpeg(result_path: Path, scenario_path: Path):
+    source = scenario_path / 'images' / '*.png'
+    dest = result_path / 'dmpr.mp4'
     logger.info("Generating movie at {}".format(dest))
 
     subprocess.call(('ffmpeg',

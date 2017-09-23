@@ -8,7 +8,8 @@ SCENARIOS=results/.scenarios
 msg_size=001-message-size
 dis_node=002-disappearing-node
 profile=003-profile-core
-
+self_check=004-self-test
+random=005-random-network
 
 help:
 	@echo "Options:"
@@ -24,6 +25,7 @@ all: fast slow
 fast:
 	$(RUN_PY) $(dis_node) --enable-video --enable-images --simulate-forwarding --sequence-diagram
 	$(RUN_PY) $(profile)
+	$(RUN_PY) $(random) --enable-video --simulate-forwarding
 
 slow:
 	$(RUN_PY) $(msg_size) --disable-logfiles
@@ -35,13 +37,18 @@ clean_fast:
 	$(RM) $(SCENARIOS)/$(dis_node)
 	$(RM) $(RESULTS)/$(profile)
 	$(RM) $(SCENARIOS)/$(profile)
+	$(RM) $(RESULTS)/$(random)
+	$(RM) $(SCENARIOS)/$(random)
 
 clean_slow:
 	$(RM) $(RESULTS)/$(msg_size)
 	$(RM) $(SCENARIOS)/$(msg_size)
 
 install-deps:
-	sudo aptitude install libffi-dev
+	sudo apt-get install libffi-dev
 	pip3 install -r requirements.txt
+
+check:
+	$(RUN_PY) $(self_check) --quiet --disable-logfiles
 
 .PHONY: help all fast slow clean clean_fast clean_slow install-deps

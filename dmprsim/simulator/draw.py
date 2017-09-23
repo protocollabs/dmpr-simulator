@@ -1,12 +1,14 @@
 import math
 import shutil
-from PIL import Image
 from pathlib import Path
 
 try:
     import cairo
 except ImportError:
     import cairocffi as cairo
+
+IMAGE_WIDTH = 1920
+IMAGE_HEIGHT = 1080
 
 
 def color_links_light(index):
@@ -133,9 +135,7 @@ def color_text_inverse(args):
         return color_text_inverse_dark()
 
 
-def draw_router_loc(args, ld: Path, area, r, img_idx):
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
-    ctx = cairo.Context(surface)
+def draw_router_loc(args, ld: Path, area, r, ctx: cairo.Context):
     ctx.rectangle(0, 0, area.x, area.y)
     ctx.set_source_rgba(*color_db(args))
     ctx.fill()
@@ -249,9 +249,6 @@ def draw_router_loc(args, ld: Path, area, r, img_idx):
         ctx.show_text(str(router.id))
         ctx.set_antialias(True)
 
-    full_path = ld / "images-range" / "{0:05}.png".format(img_idx)
-    surface.write_to_png(str(full_path))
-
 
 def color_transmission_circle_light():
     return 0., .0, .0, .2
@@ -283,9 +280,7 @@ def color_tx_links(args):
         return color_tx_links_dark()
 
 
-def draw_router_transmission(args, ld: Path, area, r, img_idx):
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, area.x, area.y)
-    ctx = cairo.Context(surface)
+def draw_router_transmission(args, ld: Path, area, r, ctx: cairo.Context):
     ctx.rectangle(0, 0, area.x, area.y)
     ctx.set_source_rgba(*color_db(args))
     ctx.fill()
@@ -343,34 +338,42 @@ def draw_router_transmission(args, ld: Path, area, r, img_idx):
         ctx.arc(x, y, 5, 0, 2 * math.pi)
         ctx.fill()
 
-    full_path = ld / "images-tx" / "{0:05}.png".format(img_idx)
-    surface.write_to_png(str(full_path))
-
-
-def image_merge(ld: Path, img_idx: int):
-    m_path = ld / "images-range-tx-merge" / "{0:05}.png".format(img_idx)
-    r_path = ld / "images-range" / "{0:05}.png".format(img_idx)
-    t_path = ld / "images-tx" / "{0:05}.png".format(img_idx)
-
-    images = map(Image.open, [r_path, t_path])
-    new_im = Image.new('RGB', (1920, 1080))
-
-    x_offset = 0
-    for image in images:
-        new_im.paste(image, (x_offset, 0))
-        x_offset += image.size[0]
-    new_im.save(m_path, "PNG")
-
 
 def draw_images(args, ld: Path, area, r, img_idx):
-    draw_router_loc(args, ld, area, r, img_idx)
-    draw_router_transmission(args, ld, area, r, img_idx)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, IMAGE_WIDTH, IMAGE_HEIGHT)
+    full_ctx = cairo.Context(surface)
+    full_ctx.rectangle(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT)
+    full_ctx.set_source_rgba(*color_db(args))
+    full_ctx.fill()
 
-    image_merge(ld, img_idx)
+    effective_width = IMAGE_WIDTH / 2
+    scale_factor = min(effective_width / area.x, IMAGE_HEIGHT / area.y)
+
+    x_center_offset = effective_width / 2 - (area.x * scale_factor / 2)
+    y_center_offset = IMAGE_HEIGHT / 2 - (area.y * scale_factor / 2)
+
+    # One context on the left, scaled to half the width and full height
+    # and centered on x- and y-axis
+    left_ctx = cairo.Context(surface)
+    left_ctx.translate(x_center_offset, y_center_offset)
+    left_ctx.scale(scale_factor, scale_factor)
+
+    # The other context on the right, scaled to half the width and full height
+    # and centered on the x- and y-axis on the right side
+    right_ctx = cairo.Context(surface)
+    right_ctx.translate(effective_width + x_center_offset, y_center_offset)
+    right_ctx.scale(scale_factor, scale_factor)
+
+    draw_router_transmission(args, ld, area, r, right_ctx)
+    draw_router_loc(args, ld, area, r, left_ctx)
+
+    surface.write_to_png(str(ld / 'images' / '{:05}.png'.format(img_idx)))
 
 
 def setup_img_folder(log_directory: Path):
-    for path in ("images-range", "images-tx", "images-range-tx-merge"):
-        path = log_directory / path
-        shutil.rmtree(str(path), ignore_errors=True)
-        path.mkdir(parents=True, exist_ok=True)
+    path = log_directory / 'images'
+    shutil.rmtree(str(path), ignore_errors=True)
+    try:
+        path.mkdir(parents=True)
+    except FileExistsError:
+        pass
