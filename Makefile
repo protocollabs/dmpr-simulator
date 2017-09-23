@@ -13,26 +13,26 @@ random=005-random-network
 
 help:
 	@echo "Options:"
-	@echo "	make all:	run all analyze scripts. WARNING: takes a looong time"
-	@echo "	make fast:	just run the fast scripts, takes only a few minutes"
-	@echo "	make slow:	just run the slow scripts"
-	@echo "	make clean:	Clean all results"
-	@echo "	make clean_fast:	Clean the results from the fast scripts"
-	@echo "	make clean_slow:	Clean the results from the slow scripts"
+	@echo "	make all:            Run all analyze scripts. WARNING: takes a looong time"
+	@echo "	make fast-run:       just run the fast scripts, takes only a few minutes"
+	@echo "	make long-run:       just run the long scripts"
+	@echo "	make clean:          Clean all results"
+	@echo "	make clean-fast-run: Clean the results from the fast scripts"
+	@echo "	make clean-long-run: Clean the results from the long scripts"
 
-all: fast slow
+all: fast-run long-run
 
-fast:
+fast-run:
 	$(RUN_PY) $(dis_node) --enable-video --enable-images --simulate-forwarding --sequence-diagram
 	$(RUN_PY) $(profile)
 	$(RUN_PY) $(random) --enable-video --simulate-forwarding
 
-slow:
+long-run:
 	$(RUN_PY) $(msg_size) --disable-logfiles
 
-clean: clean_fast clean_slow
+clean: clean-fast-run clean-long-run
 
-clean_fast:
+clean-fast:
 	$(RM) $(RESULTS)/$(dis_node)
 	$(RM) $(SCENARIOS)/$(dis_node)
 	$(RM) $(RESULTS)/$(profile)
@@ -40,7 +40,7 @@ clean_fast:
 	$(RM) $(RESULTS)/$(random)
 	$(RM) $(SCENARIOS)/$(random)
 
-clean_slow:
+clean-long-run:
 	$(RM) $(RESULTS)/$(msg_size)
 	$(RM) $(SCENARIOS)/$(msg_size)
 
@@ -51,4 +51,4 @@ install-deps:
 check:
 	$(RUN_PY) $(self_check) --quiet --disable-logfiles
 
-.PHONY: help all fast slow clean clean_fast clean_slow install-deps
+.PHONY: help all fast-run long-rung clean clean-fast-run clean-long-run install-deps
