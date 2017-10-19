@@ -112,3 +112,22 @@ class RouterForwardedPacketMiddleware(AbstractMiddleware):
     @classmethod
     def reset(cls):
         cls.forwardingRouters = set()
+
+
+class AsymmetricMiddleware(AbstractMiddleware):
+    """
+    Allows to register origin/destination pairs and drops routing messages from
+    origin to destination with the configured probability
+    """
+    asymmetric_connections = {}
+
+    def forward_routing_msg(self, origin, destination, interface_name: str,
+                            msg: dict) -> dict:
+        probability = self.asymmetric_connections.get((origin, destination), 0)
+        if probability > random.random():
+            return None
+        return msg
+
+    @classmethod
+    def add(cls, origin, destination, probability):
+        cls.asymmetric_connections[(origin, destination)] = probability
