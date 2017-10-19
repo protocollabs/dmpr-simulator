@@ -59,11 +59,13 @@ class AbstractAnalyzer(object):
                 pass
 
             file_handler = logging.FileHandler(
-                str(RESULT_PATH / cls.NAME / 'sim.log'))
+                str(RESULT_PATH / cls.NAME / 'sim.log'),
+                mode='w')
             file_handler.setLevel(logging.INFO)
 
             core_file_handler = logging.FileHandler(
-                str(RESULT_PATH / cls.NAME / 'core.log'))
+                str(RESULT_PATH / cls.NAME / 'core.log'),
+                mode='w')
             core_file_handler.setLevel(logging.INFO)
 
             logger.addHandler(file_handler)
