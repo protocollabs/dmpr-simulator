@@ -51,4 +51,7 @@ install-deps:
 check:
 	$(RUN_PY) $(self_check) --quiet --disable-logfiles
 
-.PHONY: help all fast-run long-rung clean clean-fast-run clean-long-run install-deps
+distclean:
+	git clean -f -X -d
+
+.PHONY: help all fast-run long-rung clean clean-fast-run clean-long-run install-deps distclean
