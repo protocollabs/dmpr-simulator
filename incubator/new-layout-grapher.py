@@ -56,22 +56,80 @@ def draw_surrounding_rings(ctx):
     ctx.arc(0.99, .5, .015, 0, 2 * math.pi)
     ctx.stroke()
 
+    # outer ring highlighted, to signal routing
+    # message transmission
+    ctx.set_line_width(0.001)
+    ctx.set_source_rgba(1., 0., 0.)
+    ctx.arc(0.99, .5, .015, 0, 2 * math.pi)
+    ctx.stroke()
 
 def draw_paths_between_nodes(ctx):
     ctx.set_line_width(0.0015)
     ctx.set_source_rgb(0.259, 0.647, 0.961)
 
+    node_dist_x = 0.02
+    line_between_line_spacing = 0.005
+
+    # segment 1 (left)
     ctx.move_to(0.01, 0.5)
-    ctx.curve_to(0.25, 0.48, 0.75, 0.48, 0.99, .5)
+    ctx.line_to(0.01 + node_dist_x, 0.5 - line_between_line_spacing)
     ctx.stroke()
 
-    ctx.move_to(0.01, 0.5)
-    ctx.curve_to(0.25, 0.52, 0.75, 0.52, 0.99, .5)
+    # segment 2 (middle)
+    ctx.move_to(0.01 + node_dist_x, 0.5 - line_between_line_spacing)
+    ctx.line_to(0.99 - node_dist_x, 0.5 - line_between_line_spacing)
     ctx.stroke()
 
+    # segnet 2 (right)
+    ctx.move_to(0.99 - node_dist_x, 0.5 - line_between_line_spacing)
+    ctx.line_to(0.99, 0.5)
+    ctx.stroke()
+
+    if (True):
+        ctx.set_dash([.01, .01])
+        ctx.set_source_rgb(1., .0, .0)
+        # show active transmission on this link (optional, can be disabled)
+        # segment 1 (left)
+        ctx.move_to(0.01, 0.5)
+        ctx.line_to(0.01 + node_dist_x, 0.5 - line_between_line_spacing)
+        ctx.stroke()
+
+        # segment 2 (middle)
+        ctx.move_to(0.01 + node_dist_x, 0.5 - line_between_line_spacing)
+        ctx.line_to(0.99 - node_dist_x, 0.5 - line_between_line_spacing)
+        ctx.stroke()
+
+        # segnet 2 (right)
+        ctx.move_to(0.99 - node_dist_x, 0.5 - line_between_line_spacing)
+        ctx.line_to(0.99, 0.5)
+        ctx.stroke()
+
+    # reset color and pen dash
+    ctx.set_dash([1.])
+    ctx.set_source_rgb(0.259, 0.647, 0.961)
+
+
+    # middle (direct line)
     ctx.move_to(0.01, 0.5)
     ctx.line_to(0.99, .5)
     ctx.stroke()
+
+
+    # segment 1 (left)
+    ctx.move_to(0.01, 0.5)
+    ctx.line_to(0.01 + node_dist_x, 0.5 + line_between_line_spacing)
+    ctx.stroke()
+
+    # segment 2 (middle)
+    ctx.move_to(0.01 + node_dist_x, 0.5 + line_between_line_spacing)
+    ctx.line_to(0.99 - node_dist_x, 0.5 + line_between_line_spacing)
+    ctx.stroke()
+
+    # segnet 2 (right)
+    ctx.move_to(0.99 - node_dist_x, 0.5 + line_between_line_spacing)
+    ctx.line_to(0.99, 0.5)
+    ctx.stroke()
+
 
 
 def draw_node_circle(ctx):
@@ -84,16 +142,19 @@ def draw_node_circle(ctx):
     ctx.fill()
 
 def draw_node_info(ctx):
-    ctx.set_source_rgba(1., 1., 1., .9)
 
+    # node 1
+    ctx.set_source_rgba(1., 1., 1., .9)
+    #   node von circle center to rect
     ctx.move_to(0.01, 0.5)
     ctx.line_to(0.03, 0.55)
     ctx.stroke()
 
+    #   the white rectangle
     ctx.rectangle(0.03, 0.55, .04, .02)
     ctx.fill()
 
-    # text
+    #   text
     ctx.set_source_rgb(0., .0, .0)
     ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
     ctx.set_font_size(.01);
@@ -101,8 +162,27 @@ def draw_node_info(ctx):
     ctx.show_text("23");
 
 
+    # node 2
+    ctx.set_source_rgba(1., 1., 1., .9)
+    #   node von circle center to rect
+    ctx.move_to(0.99, 0.5)
+    ctx.line_to(0.96, 0.55)
+    ctx.stroke()
+
+    #   the white rectangle
+    ctx.rectangle(0.96 - .04, 0.55, .04, .02)
+    ctx.fill()
+
+    #   text
+    ctx.set_source_rgb(0., .0, .0)
+    ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    ctx.set_font_size(.01);
+    ctx.move_to(0.96 - .04 + 0.002, 0.565);
+    ctx.show_text("666");
+
+
 def generate_image(surface):
-    surface.write_to_png("new-layout.png")
+    surface.write_to_png("simulation-graph.png")
 
 
 ctx, surface = init()
@@ -111,5 +191,3 @@ draw_paths_between_nodes(ctx)
 draw_node_circle(ctx)
 draw_node_info(ctx)
 generate_image(surface)
-
-
