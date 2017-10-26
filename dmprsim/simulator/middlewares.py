@@ -96,22 +96,25 @@ class RouterForwardedPacketMiddleware(AbstractMiddleware):
     """
     Logs all transmitted packets for visualization
     """
-    forwardingRouters = set()
+    forwarded_packets = {}
 
     def forward_packet(self, origin, destination,
                        interface_name: str, packet: dict) -> dict:
         if packet is None:
             return None
-        self.forwardingRouters.add((
-            packet['tos'],
-            origin,
-            destination,
-        ))
+        self.forwarded_packets.setdefault(origin, {})\
+            .setdefault(destination,{})\
+            .setdefault(interface_name, []).append(packet)
         return packet
 
     @classmethod
     def reset(cls):
-        cls.forwardingRouters = set()
+        cls.forwarded_packets = {}
+
+    @classmethod
+    def has_transmitted(cls, router, neighbour, interface_name):
+        return cls.forwarded_packets.get(router, {}).get(neighbour, {})\
+            .get(interface_name, False)
 
 
 class AsymmetricMiddleware(AbstractMiddleware):

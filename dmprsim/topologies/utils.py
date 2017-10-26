@@ -84,10 +84,13 @@ class GenericTopology:
                                                        self.simulation_time))
             self.area.step(sec)
 
-            self._draw(sec)
             self._forward_packet('lowest-loss')
             self._forward_packet('highest-bandwidth')
+
+            self._draw(sec)
             yield sec
+            RouterTransmittedMiddleware.reset()
+            RouterForwardedPacketMiddleware.reset()
 
     def _set_random_tx_rx_routers(self):
         if self.simulate_forwarding:
@@ -103,8 +106,7 @@ class GenericTopology:
 
     def _draw(self, sec):
         if self.gen_images and draw:
-            draw.draw_images(self.args, self.scenario_dir, self.area,
-                             self.models, sec)
+            draw.draw_images(self.scenario_dir, self.area, sec)
 
     def _generate_routers(self, models):
         generate_routers(interfaces=self.interfaces,
