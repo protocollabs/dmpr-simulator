@@ -200,8 +200,6 @@ def main():
     logging_group.add_argument('--disable-logfiles', action='store_true')
     optional_parser.add_argument('--enable-video', action='store_true')
     optional_parser.add_argument('--enable-images', action='store_true')
-    optional_parser.add_argument('--color-scheme', default='light',
-                                 choices=('light', 'dark'))
     optional_parser.add_argument('--simulate-forwarding', action='store_true')
 
     parser = argparse.ArgumentParser(parents=[optional_parser])
