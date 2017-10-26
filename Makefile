@@ -32,7 +32,7 @@ long-run:
 
 clean: clean-fast-run clean-long-run
 
-clean-fast:
+clean-fast-run:
 	$(RM) $(RESULTS)/$(dis_node)
 	$(RM) $(SCENARIOS)/$(dis_node)
 	$(RM) $(RESULTS)/$(profile)
