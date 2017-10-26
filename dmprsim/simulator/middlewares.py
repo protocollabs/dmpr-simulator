@@ -25,8 +25,9 @@ class MiddlewareController(object):
 
 class AbstractMiddleware(object):
     """
-    A Middleware can be registered with a Router and helps performing all tasks
-    on a transmitted message or packet between this Router and a destination
+    A Middleware can be registered in the MiddlewareController and helps
+    performing all tasks on a transmitted message or packet between a router and
+    a destination
     """
 
     def forward_routing_msg(self, origin, destination,
@@ -63,7 +64,7 @@ class AbstractMiddleware(object):
 
 class RoutingMsgLossMiddleware(AbstractMiddleware):
     """
-    Drops Routing messages based on the loss property of the interface
+    Drops routing messages based on the loss property of the interface
     """
 
     def forward_routing_msg(self, origin, destination,
@@ -76,7 +77,7 @@ class RoutingMsgLossMiddleware(AbstractMiddleware):
 
 class RouterTransmittedMiddleware(AbstractMiddleware):
     """
-    Logs Routers who emitted a routing message for visualization
+    Logs routers which emitted a routing message for visualization
     """
     transmitting_routers = set()
 

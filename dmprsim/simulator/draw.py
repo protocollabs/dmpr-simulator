@@ -20,8 +20,12 @@ def draw_images(ld: Path, area, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, IMAGE_WIDTH, IMAGE_HEIGHT)
     full_ctx = cairo.Context(surface)
     full_ctx.rectangle(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT)
+
+    # Fill background
     full_ctx.set_source_rgb(0.05, 0.05, 0.05)
     full_ctx.fill()
+
+    # Add current time in top-left corner
     full_ctx.set_source_rgba(1., 1., 1., .8)
     full_ctx.rectangle(10, 10, 40, 20)
     full_ctx.fill()
@@ -33,13 +37,12 @@ def draw_images(ld: Path, area, img_idx):
     full_ctx.set_font_size(15)
     full_ctx.show_text(str(img_idx))
 
+    # Compute the scale factor and center the main context on the surface
     scale_factor = min(IMAGE_WIDTH / area.width, IMAGE_HEIGHT / area.height)
 
     x_center_offset = IMAGE_WIDTH / 2 - (area.width * scale_factor / 2)
     y_center_offset = IMAGE_HEIGHT / 2 - (area.height * scale_factor / 2)
 
-    # One context on the left, scaled to half the width and full height
-    # and centered on x- and y-axis
     ctx = cairo.Context(surface)
     ctx.translate(x_center_offset, y_center_offset)
     ctx.scale(scale_factor, scale_factor)
@@ -50,6 +53,9 @@ def draw_images(ld: Path, area, img_idx):
 
 
 def draw_nodes(area, ctx):
+    """
+    Draw all elements of the final image
+    """
     draw_surrounding_rings(area, ctx)
     draw_paths_between_nodes(area, ctx)
     draw_node_circle(area, ctx)
@@ -57,6 +63,11 @@ def draw_nodes(area, ctx):
 
 
 def draw_surrounding_rings(area, ctx):
+    """
+    Draw the white rings and the red transmission ring around each node
+
+    This is done first so it will be in the background
+    """
     for model in area.models:
         ctx.set_line_width(0.5)
         ctx.set_source_rgba(1., 1., 1.)
@@ -81,6 +92,12 @@ def draw_surrounding_rings(area, ctx):
 
 
 def draw_paths_between_nodes(area, ctx):
+    """
+    Draw all paths between nodes
+
+    One path for each link, the exact drawing is handeld in draw_connection.
+    Links with a active packet transmission are dashed red.
+    """
     ctx.set_source_rgb(1., 1., 1.)
     ctx.set_line_width(1)
     for model in area.models:
@@ -108,6 +125,9 @@ rotate_clockwise = np.array(((0, 1), (-1, 0)))
 
 
 def normalize(vector):
+    """
+    Normalize a numpy vector
+    """
     norm = np.linalg.norm(vector)
     if norm == 0:
         return vector
@@ -115,6 +135,21 @@ def normalize(vector):
 
 
 def draw_connection(ctx, fromx, fromy, tox, toy, idx, num, dashed=False):
+    """
+    Draw a link between the nodes at from(x/y) and to(x/y).
+
+    The offset to the side is defined by idx and num
+
+    :param ctx: Cairo context
+    :param fromx: x coordinate origin node
+    :param fromy: y coordinate origin node
+    :param tox: x coordinate destination node
+    :param toy: y coordinate destination node
+    :param idx: Index of the link if there are more than one, starts at 1
+    :param num: The total amount of links
+    :param dashed: bool, if true the line will be dashed red
+    """
+
     # Get vectors from coordinates
     from_ = np.array((fromx, fromy))
     to = np.array((tox, toy))
@@ -127,22 +162,24 @@ def draw_connection(ctx, fromx, fromy, tox, toy, idx, num, dashed=False):
     basis_to_context = np.transpose(np.array([b1, b2]))
     basis_to_normalized = np.linalg.inv(basis_to_context)
 
-    # The length, converted into the "normalized" basis
+    # The length of the start and end strips, converted into normalized basis
     normalized_length = np.linalg.norm(
         basis_to_normalized.dot(np.array((10, 0))))
 
+    # Offset of the link to the side of the straight line
     offset = (num - 1) * (-0.5) + (idx - 1) * 1
-
     start = np.array((2, offset))
     end = np.array((2, -offset))
 
+    # Scale the offsets correctly
     start = normalize(start) * normalized_length * math.sqrt(abs(offset))
     end = normalize(end) * normalized_length * math.sqrt(abs(offset))
 
-    # Handle short connections and the length of start and end strips
+    # Handle short connections
     diff = 1 - start[0] - end[0]
     if diff < 0:
-        # We must cap the start and end strips
+        # The connection is shorter than the start and end strips
+        # We must cap them
         start /= start[0] - diff / 2
         end /= end[0] - diff / 2
         # Also we don't need a line between them as they are directly next to
@@ -172,6 +209,9 @@ def draw_connection(ctx, fromx, fromy, tox, toy, idx, num, dashed=False):
 
 
 def draw_node_circle(area, ctx):
+    """
+    Draw a circle where the node is
+    """
     ctx.set_source_rgb(1., 1., 1.)
     for model in area.models:
         ctx.arc(model.x, model.y, 4, 0, 2 * math.pi)
@@ -179,22 +219,34 @@ def draw_node_circle(area, ctx):
 
 
 def draw_node_info(area, ctx):
+    """
+    Draw a rectangle and the id of the node
+    """
     for model in area.models:
         ctx.set_source_rgba(1., 1., 1., .8)
         x, y = model.x, model.y
+        # The lengths of the line
         xdelta = 10
         ydelta = 10
+
+        # The offset of the rectangle if it is left or up of the node
         x_rect = 0
         y_rect = 0
+
+        # The dimensions of the rectangle
         width = 20
         height = 10
+
+        # If there is not enough space right or down of the node, move to the
+        # left or up
         if x + xdelta + width > area.width:
             xdelta = -xdelta
             x_rect = -width
         if y + ydelta + height > area.height:
             ydelta = -ydelta
             y_rect = -height
-        ctx.move_to(model.x, model.y)
+
+        ctx.move_to(x, y)
         ctx.line_to(x + xdelta, y + ydelta)
         ctx.stroke()
         ctx.rectangle(x + xdelta + x_rect, y + ydelta + y_rect, width, height)

@@ -5,6 +5,9 @@ import random
 
 
 class TimeWrapper(object):
+    """
+    Global Time object, needed for patching the logger
+    """
     time = 0
 
 
@@ -23,6 +26,10 @@ patch_log_record_factory()
 
 
 class MobilityArea(object):
+    """
+    Defines an area where all nodes live and move on, can be subclassed
+    and get_neighbors can be overridden if necessary
+    """
     def __init__(self, width, height):
         self.width = width
         self.height = height
@@ -56,6 +63,10 @@ class MobilityArea(object):
 
 
 class MobilityModel(object):
+    """
+    A basic model, does support disappearing randomly and has all lifecylce
+    methods.
+    """
     def __init__(self, area: MobilityArea, coords: tuple = None,
                  disappearance_pattern: tuple = (0, 0, 0)):
         self.area = area
@@ -102,6 +113,9 @@ class MobilityModel(object):
 
 
 class MovingMobilityModel(MobilityModel):
+    """
+    A moving model
+    """
     def __init__(self, area: MobilityArea, coords: tuple = None,
                  disappearance_pattern: tuple = (0, 0, 0), velocity=lambda: 0):
         super(MovingMobilityModel, self).__init__(
