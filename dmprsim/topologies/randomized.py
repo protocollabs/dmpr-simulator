@@ -1,7 +1,7 @@
 import random
 from pathlib import Path
 
-from dmprsim.simulator import MobilityArea, MobilityModel
+from dmprsim.simulator import MobilityArea, MovingMobilityModel
 from dmprsim.topologies.utils import GenericTopology
 
 
@@ -12,8 +12,16 @@ class RandomTopology(GenericTopology):
     DEFAULT_AREA = (1000, 1000)
     DEFAULT_RAND_SEED = 1
     DEFAULT_INTERFACES = [
-        {"name": "wifi0", "range": 50, "bandwidth": 8000, "loss": 10},
-        {"name": "tetra0", "range": 100, "bandwidth": 1000, "loss": 5}
+        {
+            "name": "wifi0",
+            "range": 50,
+            "core-config": {"bandwidth": 8000, "loss": 10},
+        },
+        {
+            "name": "tetra0",
+            "range": 100,
+            "core-config": {"bandwidth": 1000, "loss": 5},
+        },
     ]
 
     def __init__(self,
@@ -57,25 +65,16 @@ class RandomTopology(GenericTopology):
 
         random.seed(self.random_seed_prep)
 
-        models = (MobilityModel(self.area,
-                                velocity=self.velocity,
-                                disappearance_pattern=self.disappearance_pattern)
-                  for _ in range(self.num_routers))
+        self.models = [MovingMobilityModel(self.area,
+                                           velocity=self.velocity,
+                                           disappearance_pattern=self.disappearance_pattern)
+                       for _ in range(self.num_routers)]
 
-        self.routers = self._generate_routers(models)
+        self._generate_routers(self.models)
 
-        if self.simulate_forwarding:
-            self.tx_router = random.choice(self.routers)
-            while True:
-                rx_router = random.choice(self.routers)
-                if rx_router != self.tx_router:
-                    break
+        self._set_random_tx_rx_routers()
 
-            self.tx_router.is_transmitter = True
-            rx_router.is_receiver = True
-            self.rx_ip = rx_router.pick_random_configured_network()
-
-        return self.routers
+        return self.models
 
 
 if __name__ == '__main__':

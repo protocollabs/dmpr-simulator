@@ -16,6 +16,9 @@ Features:
 
 [![DMPR Promo Video](http://img.youtube.com/vi/PypxZ2UQi3E/0.jpg)](https://www.youtube.com/watch?v=PypxZ2UQi3E)
 
+You can generate a more up-to-date version of that video yourself with
+`make promotion-video`
+
 ## Installation
 
 This repository uses git submodules to include the DMPR core component. You need

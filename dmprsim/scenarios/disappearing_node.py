@@ -25,20 +25,21 @@ def main(args, results_dir: Path, scenario_dir: Path):
         core_config=CONFIG,
         args=args,
     )
-    routers = simulation.prepare()
+    models = simulation.prepare()
 
-    simulation.tx_router = routers[0]
-    routers[0].is_transmitter = True
-    simulation.rx_ip = routers[2].pick_random_configured_network()
-    routers[2].is_receiver = True
+    tx_router = models[0].router
+    rx_router = models[2].router
+    simulation.tx_router = tx_router
+    tx_router.is_transmitter = True
+    simulation.rx_ip = rx_router.get_random_network()
+    rx_router.is_receiver = True
     simulation.simulate_forwarding = True
 
     for sec in simulation.start():
-        if sec == 300:
-            routers[1].mm.visible = False
-
-        if sec == 900:
-            routers[1].mm.visible = True
+        if sec > 900:
+            models[1].visible = True
+        elif sec > 300:
+            models[1].visible = False
 
     if simulation.gen_movie:
         ffmpeg(results_dir, scenario_dir)
