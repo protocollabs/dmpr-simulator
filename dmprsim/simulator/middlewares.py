@@ -2,6 +2,13 @@ import random
 
 
 class MiddlewareController(object):
+    """
+    Handles activated middleware and provides methods to apply middleware
+
+    Use MiddlewareController.activate to activate a middleware,
+    also provides forward_routing_msg and forward_packet to apply all activated
+    middleware to a routing message or a simulated packet
+    """
     activated_middleware = list()
 
     @classmethod
