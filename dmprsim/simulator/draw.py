@@ -255,13 +255,12 @@ def draw_node_info(area, ctx):
     Draw a rectangle and the id of the node
     """
     for model in area.models:
-        ctx.set_source_rgba(1., 1., 1., .8)
         x, y = model.x, model.y
         # The lengths of the line
         xdelta = 10
         ydelta = 10
 
-        # The offset of the rectangle if it is left or up of the node
+        # The offset of the rectangle, required if it is left or up of the node
         x_rect = 0
         y_rect = 0
 
@@ -278,6 +277,16 @@ def draw_node_info(area, ctx):
             ydelta = -ydelta
             y_rect = -height
 
+        # Generate text for node, adjust rectangle size
+        text = str(model.router.id)
+        if model.router.is_transmitter:
+            text += " (tx)"
+            width += 15
+        elif model.router.is_receiver:
+            text += " (rx)"
+            width += 15
+
+        ctx.set_source_rgba(1., 1., 1., .8)
         ctx.move_to(x, y)
         ctx.line_to(x + xdelta, y + ydelta)
         ctx.stroke()
@@ -289,7 +298,8 @@ def draw_node_info(area, ctx):
                              cairo.FONT_WEIGHT_NORMAL)
         ctx.set_font_size(10)
         ctx.move_to(x + xdelta + x_rect, y + ydelta + y_rect + height - 1)
-        ctx.show_text(str(model.router.id))
+
+        ctx.show_text(text)
 
 
 def setup_img_folder(log_directory: Path):
