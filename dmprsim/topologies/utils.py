@@ -106,7 +106,7 @@ class GenericTopology:
 
     def _draw(self, sec):
         if self.gen_images and draw:
-            draw.draw_images(self.scenario_dir, self.area, sec)
+            draw.draw_images(self.args, self.scenario_dir, self.area, sec)
 
     def _generate_routers(self, models):
         generate_routers(interfaces=self.interfaces,

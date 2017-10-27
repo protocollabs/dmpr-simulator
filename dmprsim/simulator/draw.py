@@ -12,8 +12,12 @@ except ImportError:
 from .middlewares import RouterForwardedPacketMiddleware, \
     RouterTransmittedMiddleware
 
-IMAGE_WIDTH = 1920
-IMAGE_HEIGHT = 1080
+RESOLUTION = {
+    '4k': (3840, 2160),
+    'hd': (1920, 1080),
+    'hdready': (1280, 720),
+    'vga': (640, 480),
+}
 
 MAP_TOS_TO_COLOR = {}
 
@@ -32,7 +36,9 @@ link_colors = [
 link_colors = [tuple(map(lambda x: x / 255, color)) for color in link_colors]
 
 
-def draw_images(ld: Path, area, img_idx):
+def draw_images(args, ld: Path, area, img_idx):
+    IMAGE_WIDTH, IMAGE_HEIGHT = RESOLUTION[getattr(args, 'resolution')]
+
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, IMAGE_WIDTH, IMAGE_HEIGHT)
     full_ctx = cairo.Context(surface)
     full_ctx.rectangle(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT)
