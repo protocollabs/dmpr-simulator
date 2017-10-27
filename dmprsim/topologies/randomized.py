@@ -65,10 +65,10 @@ class RandomTopology(GenericTopology):
 
         random.seed(self.random_seed_prep)
 
-        self.models = (MovingMobilityModel(self.area,
+        self.models = [MovingMobilityModel(self.area,
                                            velocity=self.velocity,
                                            disappearance_pattern=self.disappearance_pattern)
-                       for _ in range(self.num_routers))
+                       for _ in range(self.num_routers)]
 
         self._generate_routers(self.models)
 
