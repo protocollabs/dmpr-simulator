@@ -2,7 +2,10 @@
 import argparse
 import logging
 import tempfile
+import textwrap
 from pathlib import Path
+
+TEXT_WRAPPER = textwrap.TextWrapper(subsequent_indent=' ' * 4, width=80)
 
 DESCRIPTION = """\
 The dmpr-simulator, choose one of the scenarios listed below, results are
@@ -23,6 +26,9 @@ class AbstractAnalyzer(object):
     NUM = 0
     HELP = ''
 
+    # All files created by this script
+    GEN_FILES = []
+
     @classmethod
     def argparser(cls, sub_parser: argparse._SubParsersAction,
                   optionals: argparse.ArgumentParser):
@@ -39,8 +45,14 @@ class AbstractAnalyzer(object):
 
     @classmethod
     def start(cls, args):
-        # Setup logging
+        # Set generated files
+        if args.enable_video:
+            cls.GEN_FILES.append(("dmpr.mp4",
+                                  "A visualization of the network, the routing"
+                                  " messages sent and the packets forwarded"
+                                  " during the simulation"))
 
+        # Setup logging
         # We want to split core and sim logs
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
@@ -49,6 +61,8 @@ class AbstractAnalyzer(object):
         core_console_handler.setLevel(logging.WARNING)
 
         if not args.disable_logfiles:
+            cls.GEN_FILES.append(("*.log",
+                                  "The logfiles according to the loglevel"))
             try:
                 (RESULT_PATH / cls.NAME).mkdir(parents=True)
             except FileExistsError:
@@ -88,10 +102,18 @@ class AbstractAnalyzer(object):
         core_logger.addHandler(core_console_handler)
 
         cls.run(args)
+        cls.write_readme()
 
     @classmethod
     def run(cls, args):
         raise NotImplementedError
+
+    @classmethod
+    def write_readme(cls):
+        with (RESULT_PATH / cls.NAME / 'README.md').open('w') as f:
+            f.write("# Generated files\n\n")
+            for name, text in cls.GEN_FILES:
+                f.write("- {}: {}\n".format(name, TEXT_WRAPPER.fill(text)))
 
 
 class MessageSize(AbstractAnalyzer):
@@ -107,6 +129,7 @@ class MessageSize(AbstractAnalyzer):
 
     @classmethod
     def run(cls, args):
+        cls.GEN_FILES.append(("*.png", "The plots"))  # FIXME more detailed
         # Set default loglevel for this simulation to warning
         from dmprsim.analyze.message_size import main
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
@@ -127,6 +150,10 @@ class DisappearingNode(AbstractAnalyzer):
 
     @classmethod
     def run(cls, args):
+        if args.sequence_diagram:
+            cls.GEN_FILES.append(("sequence_diagram.svg",
+                                  "A sequence diagram of all messages sent"
+                                  " between the nodes"))
         from dmprsim.analyze.disappearing_node import main
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
 
@@ -140,6 +167,10 @@ class ProfileCore(AbstractAnalyzer):
 
     @classmethod
     def run(cls, args):
+        cls.GEN_FILES.append(("profile.pstats",
+                              "A python profiler file which contains all method"
+                              " calls and their timing, helpful when profiling"
+                              " performance bottlenecks"))
         from dmprsim.analyze.profile_core import main
         main(args, RESULT_PATH / cls.NAME, SCENARIO_PATH / cls.NAME)
 
@@ -172,8 +203,8 @@ class RandomNetwork(AbstractAnalyzer):
         parser.add_argument('--num-routers', type=int, default=125)
         parser.add_argument('--simulation-time', type=int, default=300)
         parser.add_argument('--random-seed-prep', type=int, default=1,
-                            help='The random seed for generating the network.'
-                                 ' Same seed should result in the same network.')
+                            help='The random seed for generating the network. '
+                                 'Same seed should result in the same network.')
         parser.add_argument('--random-seed-runtime', type=int, default=1,
                             help='The random seed for simulating the network.'
                                  ' Same seed on the same network should result'
