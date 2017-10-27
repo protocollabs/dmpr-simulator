@@ -113,9 +113,9 @@ class RouterForwardedPacketMiddleware(AbstractMiddleware):
         cls.forwarded_packets = {}
 
     @classmethod
-    def has_transmitted(cls, router, neighbour, interface_name):
+    def get_packets(cls, router, neighbour, interface_name):
         return cls.forwarded_packets.get(router, {}).get(neighbour, {})\
-            .get(interface_name, False)
+            .get(interface_name, [])
 
 
 class AsymmetricMiddleware(AbstractMiddleware):

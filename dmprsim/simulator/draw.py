@@ -15,6 +15,22 @@ from .middlewares import RouterForwardedPacketMiddleware, \
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
 
+MAP_TOS_TO_COLOR = {}
+
+link_colors = [
+    (255, 0, 0),  # red
+    (255, 20, 147),  # pink
+    (255, 127, 80),  # coral
+    (255, 255, 0),  # yellow
+    (189, 183, 107),  # darkkhaki
+    (138, 43, 226),  # blueviolet
+    (0, 255, 0),  # lime
+    (102, 205, 170),  # mediumaquamarin
+    (0, 0, 255),  # blue
+    (218, 165, 32),  # goldenrod
+]
+link_colors = [tuple(map(lambda x: x / 255, color)) for color in link_colors]
+
 
 def draw_images(ld: Path, area, img_idx):
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, IMAGE_WIDTH, IMAGE_HEIGHT)
@@ -25,17 +41,7 @@ def draw_images(ld: Path, area, img_idx):
     full_ctx.set_source_rgb(0.05, 0.05, 0.05)
     full_ctx.fill()
 
-    # Add current time in top-left corner
-    full_ctx.set_source_rgba(1., 1., 1., .8)
-    full_ctx.rectangle(10, 10, 40, 20)
-    full_ctx.fill()
-    full_ctx.move_to(10, 27)
-
-    full_ctx.set_source_rgb(1., .0, .0)
-    full_ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
-                              cairo.FONT_WEIGHT_NORMAL)
-    full_ctx.set_font_size(15)
-    full_ctx.show_text(str(img_idx))
+    draw_frame_info(full_ctx, img_idx)
 
     # Compute the scale factor and center the main context on the surface
     scale_factor = min(IMAGE_WIDTH / area.width, IMAGE_HEIGHT / area.height)
@@ -50,6 +56,26 @@ def draw_images(ld: Path, area, img_idx):
     draw_nodes(area, ctx)
 
     surface.write_to_png(str(ld / 'images' / '{:05}.png'.format(img_idx)))
+
+
+def draw_frame_info(ctx, img_idx):
+    # Add current time in top-left corner
+    ctx.set_source_rgba(1., 1., 1., .6)
+    ctx.rectangle(10, 10, 40, 20)
+    ctx.fill()
+
+    ctx.set_source_rgb(0., .0, .0)
+    ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
+                         cairo.FONT_WEIGHT_NORMAL)
+    ctx.set_font_size(14)
+
+    ctx.move_to(10, 27)
+    ctx.show_text(str(img_idx))
+
+    for i, tos in enumerate(MAP_TOS_TO_COLOR):
+        ctx.move_to(10, 47 + 20*i)
+        ctx.set_source_rgb(*MAP_TOS_TO_COLOR[tos])
+        ctx.show_text(''.join(i[0] for i in tos.split('-')))
 
 
 def draw_nodes(area, ctx):
@@ -108,17 +134,20 @@ def draw_paths_between_nodes(area, ctx):
                 connections.setdefault(neighbor, []).append(interface_name)
 
         for neighbor in connections:
+            if router.id > neighbor.id:
+                continue
             interfaces = sorted(connections[neighbor])
 
             for i, interface in enumerate(interfaces):
-                dashed = RouterForwardedPacketMiddleware.has_transmitted(
-                    router, neighbor, interface) or \
-                         RouterForwardedPacketMiddleware.has_transmitted(
-                             neighbor, router, interface)
+                packets = RouterForwardedPacketMiddleware.get_packets(
+                    router, neighbor, interface)
+                packets.extend(RouterForwardedPacketMiddleware.get_packets(
+                    neighbor, router, interface))
+                tos = list(set(packet['tos'] for packet in packets))
                 draw_connection(ctx, model.x, model.y,
                                 neighbor.model.x, neighbor.model.y,
                                 i + 1, len(interfaces),
-                                dashed=dashed)
+                                dashed=tos)
 
 
 rotate_clockwise = np.array(((0, 1), (-1, 0)))
@@ -134,7 +163,8 @@ def normalize(vector):
     return vector / norm
 
 
-def draw_connection(ctx, fromx, fromy, tox, toy, idx, num, dashed=False):
+def draw_connection(ctx, fromx, fromy, tox, toy, idx, num,
+                    dashed: list = []):
     """
     Draw a link between the nodes at from(x/y) and to(x/y).
 
@@ -197,9 +227,11 @@ def draw_connection(ctx, fromx, fromy, tox, toy, idx, num, dashed=False):
     ctx.rel_line_to(*basis_to_context.dot(end))
     ctx.stroke()
 
-    if dashed:
-        ctx.set_source_rgb(1., 0., 0.)
-        ctx.set_dash([10])
+    for tos in dashed:
+        color = link_colors[hash(tos) % len(link_colors)]
+        MAP_TOS_TO_COLOR[tos] = color
+        ctx.set_source_rgb(*color)
+        ctx.set_dash([hash(tos) % 15 + 1])
         ctx.move_to(*from_)
         ctx.rel_line_to(*basis_to_context.dot(start))
         ctx.rel_line_to(*basis_to_context.dot(line))
