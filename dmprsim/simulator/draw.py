@@ -65,10 +65,10 @@ def draw_images(args, ld: Path, area, img_idx):
 
     surface.write_to_png(str(ld / 'images' / '{:05}.png'.format(img_idx)))
 
+
 def draw_backgroud_grid(ctx, width, height):
     no_lines = 20
     dist = width // 20
-
 
     ctx.set_line_width(0.08)
     ctx.set_source_rgb(1., 1., 1.)
@@ -88,7 +88,6 @@ def draw_backgroud_grid(ctx, width, height):
         ctx.line_to(x_pos, height)
         ctx.stroke()
         x_pos += dist
-
 
 
 def draw_frame_info(ctx, img_idx):

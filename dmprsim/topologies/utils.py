@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import random
 import subprocess
@@ -6,6 +7,7 @@ from pathlib import Path
 
 try:
     from dmprsim.simulator import draw
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
 except ImportError:
     draw = None
 from dmprsim.simulator import Router
@@ -149,3 +151,43 @@ def ffmpeg(result_path: Path, scenario_path: Path):
     else:
         logger.info("Generated movie failed! Please take a look "
                     "output and fill a bug report")
+
+
+def _video_blurred(im, no):
+    max_ = 30
+    radius = max_ - no
+    blurred_image = im.filter(ImageFilter.GaussianBlur(radius=radius))
+    return blurred_image
+
+def _text_img(im, text, font, width, height, w, h, no):
+    txt = Image.new('RGBA', im.size, (255,255,255,0))
+    d = ImageDraw.Draw(txt)
+    d.text(((width - w) / 2, (height - h) / 2), text, font=font, fill=(255,255,255,128))
+    return txt
+
+def video_gen_intro(result_path: Path, scenario_path: Path):
+    logger.info("generate promotion video intro now")
+    text = "Dymanic MultiPath Routing"
+    source = os.path.join(str(scenario_path), 'images', '00000.png')
+    # be liberal, skip if no image is available
+    if not os.path.isfile(source):
+        logger.error("No image file for Video intro generation")
+        return
+
+    im = Image.open(source).convert('RGBA')
+    width, height = im.size
+    fnt = ImageFont.truetype('/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf', 60)
+    w, h = fnt.getsize(text)
+    for i in range(0, 30):
+        im_blur = _video_blurred(im, i)
+        im_text = _text_img(im, text, fnt, width, height, w, h, i)
+        out = Image.alpha_composite(im_blur, im_text)
+        out_file = os.path.join(str(scenario_path), 'images', '{:08}.png'.format(i))
+        out.save(out_file)
+
+    # finally remove the 000000.png image, just because
+    # it will be ordered before any other (blurred) images
+    os.remove(source)
+    logger.info("generate promotion video intro finished")
+
+

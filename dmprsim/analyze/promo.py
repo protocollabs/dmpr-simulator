@@ -2,14 +2,14 @@ import random
 from pathlib import Path
 
 from dmprsim.topologies.randomized import RandomTopology
-from dmprsim.topologies.utils import ffmpeg
+from dmprsim.topologies.utils import ffmpeg, video_gen_intro
 
 SIMULATION_TIME = 1200
 
 INTERFACES = [
     {
         "name": "wifi0",
-        "range": 75,
+        "range": 100,
         "core-config": {
             "link-attributes": {"bandwidth": 8000, "loss": 10},
         }
@@ -47,4 +47,5 @@ def main(args, results_dir: Path, scenario_dir: Path):
         pass
 
     if sim.gen_movie:
+        video_gen_intro(results_dir, scenario_dir)
         ffmpeg(results_dir, scenario_dir)
