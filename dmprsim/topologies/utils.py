@@ -141,7 +141,7 @@ def ffmpeg(result_path: Path, scenario_path: Path):
            '-pix_fmt', 'yuv420p',
            '-y',
            dest)
-    logger.info("now generating video: \"\"".format(" ".join(cmd)))
+    logger.info("now generating video: \"{}\"".format(" ".join(cmd)))
     subprocess.call(cmd)
 
     if os.path.isfile(dest):

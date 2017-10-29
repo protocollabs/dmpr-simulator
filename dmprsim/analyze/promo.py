@@ -16,7 +16,7 @@ INTERFACES = [
     },
     {
         "name": "tetra0",
-        "range": 150,
+        "range": 200,
         "core-config": {
             "link-attributes": {"bandwidth": 1000, "loss": 5},
         }

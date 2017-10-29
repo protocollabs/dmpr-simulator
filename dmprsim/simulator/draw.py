@@ -47,6 +47,8 @@ def draw_images(args, ld: Path, area, img_idx):
     full_ctx.set_source_rgb(0.05, 0.05, 0.05)
     full_ctx.fill()
 
+    draw_backgroud_grid(full_ctx, IMAGE_WIDTH, IMAGE_HEIGHT)
+
     draw_frame_info(full_ctx, img_idx)
 
     # Compute the scale factor and center the main context on the surface
@@ -62,6 +64,31 @@ def draw_images(args, ld: Path, area, img_idx):
     draw_nodes(area, ctx)
 
     surface.write_to_png(str(ld / 'images' / '{:05}.png'.format(img_idx)))
+
+def draw_backgroud_grid(ctx, width, height):
+    no_lines = 20
+    dist = width // 20
+
+
+    ctx.set_line_width(0.08)
+    ctx.set_source_rgb(1., 1., 1.)
+
+    # draw horizontal lines
+    y_pos = dist
+    for _ in range(0, no_lines):
+        ctx.move_to(0, y_pos)
+        ctx.line_to(width, y_pos)
+        ctx.stroke()
+        y_pos += dist
+
+    # draw horizontal lines
+    x_pos = dist
+    for _ in range(0, no_lines):
+        ctx.move_to(x_pos, 0)
+        ctx.line_to(x_pos, height)
+        ctx.stroke()
+        x_pos += dist
+
 
 
 def draw_frame_info(ctx, img_idx):
