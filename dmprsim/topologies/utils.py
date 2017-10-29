@@ -1,3 +1,4 @@
+import os
 import logging
 import random
 import subprocess
@@ -131,9 +132,7 @@ def generate_routers(interfaces: list, mobility_models: list,
 
 def ffmpeg(result_path: Path, scenario_path: Path):
     source = scenario_path / 'images' / '*.png'
-    dest = result_path / 'dmpr.mp4'
-    logger.info("Generating movie at {}".format(dest))
-
+    dest = os.path.join(str(result_path), 'dmpr.mp4')
     subprocess.call(('ffmpeg',
                      '-framerate', '10',
                      '-pattern_type', 'glob',
@@ -141,4 +140,10 @@ def ffmpeg(result_path: Path, scenario_path: Path):
                      '-c:v', 'libx264',
                      '-pix_fmt', 'yuv420p',
                      '-y',
-                     str(dest)))
+                     dest))
+
+    if os.path.isfile(dest):
+        logger.info("Generating movie at {}".format(dest))
+    else:
+        logger.info("Generating movie failed! Please take a look "
+                    "output and fill a bug report")
